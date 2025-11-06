@@ -1,10 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useRef } from "react";
 
 const RiseLandingPage = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
-
+  const router = useRouter();
   useEffect(() => {
     // Smooth scroll for anchor links
     const handleAnchorClick = (e: MouseEvent) => {
@@ -259,7 +260,7 @@ const RiseLandingPage = () => {
                     <span className="text-sm sm:text-base lg:text-lg">Dubai Islands</span>
                   </div>
                 </div>
-                <button className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold hover:shadow-xl cursor-pointer transition-all duration-300 hover:scale-105 bg-[#E3DBC8] text-[#111111] text-sm sm:text-base">
+                <button onClick={()=>{router.push('/event')}} className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold hover:shadow-xl cursor-pointer transition-all duration-300 hover:scale-105 bg-[#E3DBC8] text-[#111111] text-sm sm:text-base">
                   Find Out More
                 </button>
               </div>
