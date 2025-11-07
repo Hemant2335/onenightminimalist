@@ -1,0 +1,377 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber, 
+  ConfirmationResult ,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase"; 
+
+// --- Auth Popup Component ---
+export const AuthPopup = ({ 
+  isOpen, 
+  onClose, 
+  type 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  type: "signin" | "signup" 
+}) => {
+  const [step, setStep] = useState<"phone" | "otp" | "name">("phone");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+
+  // Initialize reCAPTCHA
+  useEffect(() => {
+    if (isOpen && !recaptchaVerifier) {
+      const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {
+          // reCAPTCHA solved
+        },
+        'expired-callback': () => {
+          setError("reCAPTCHA expired. Please try again.");
+        }
+      });
+      setRecaptchaVerifier(verifier);
+    }
+
+    return () => {
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+      }
+    };
+  }, [isOpen]);
+
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Format phone number (ensure it starts with country code)
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+
+      if (!recaptchaVerifier) {
+        throw new Error("reCAPTCHA not initialized");
+      }
+
+      // Send OTP via Firebase
+      const confirmation = await signInWithPhoneNumber(
+        auth, 
+        formattedPhone, 
+        recaptchaVerifier
+      );
+      
+      setConfirmationResult(confirmation);
+      
+      // Check if user exists in your database
+      const response = await fetch("/api/auth/check-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: formattedPhone }),
+      });
+
+      const data = await response.json();
+
+      if (data.exists) {
+        // Existing user - go straight to OTP
+        setStep("otp");
+      } else {
+        // New user - collect name first, then OTP
+        setStep("name");
+      }
+    } catch (err: any) {
+      console.error("Phone verification error:", err);
+      if (err.code === 'auth/invalid-phone-number') {
+        setError("Invalid phone number format. Please include country code.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Too many attempts. Please try again later.");
+      } else {
+        setError("Failed to send OTP. Please try again.");
+      }
+      
+      // Reset reCAPTCHA on error
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+        const newVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+        });
+        setRecaptchaVerifier(newVerifier);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Store name temporarily (will be saved after OTP verification)
+      setStep("otp");
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      if (!confirmationResult) {
+        throw new Error("No confirmation result available");
+      }
+
+      // Verify OTP with Firebase
+      const result = await confirmationResult.confirm(otp);
+      const user = result.user;
+
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+
+      // Create/update user in your database
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          firebaseToken: idToken,
+          phone: user.phoneNumber,
+          name: name || undefined,
+          uid: user.uid
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store token/session
+        localStorage.setItem("authToken", data.token);
+        
+        // Reset form
+        onClose();
+        setStep("phone");
+        setPhone("");
+        setOtp("");
+        setName("");
+        setConfirmationResult(null);
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("OTP verification error:", err);
+      if (err.code === 'auth/invalid-verification-code') {
+        setError("Invalid OTP. Please check and try again.");
+      } else if (err.code === 'auth/code-expired') {
+        setError("OTP expired. Please request a new one.");
+      } else {
+        setError("OTP verification failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setLoading(true);
+    setError("");
+    setOtp("");
+
+    try {
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      
+      if (!recaptchaVerifier) {
+        throw new Error("reCAPTCHA not initialized");
+      }
+
+      const confirmation = await signInWithPhoneNumber(
+        auth, 
+        formattedPhone, 
+        recaptchaVerifier
+      );
+      
+      setConfirmationResult(confirmation);
+      setError("");
+      
+      // Show success message (optional)
+      alert("OTP sent successfully!");
+    } catch (err: any) {
+      console.error("Resend OTP error:", err);
+      setError("Failed to resend OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[#1E2022] border border-[#C9D6DF]/20 rounded-2xl w-full max-w-md p-8 relative">
+        {/* reCAPTCHA Container */}
+        <div id="recaptcha-container"></div>
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#52616B]/20 transition-colors"
+        >
+          <svg className="w-5 h-5 text-[#C9D6DF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Header */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-[#F0F5F9] mb-2">
+            {step === "phone" 
+              ? (type === "signin" ? "Welcome Back" : "Join Us") 
+              : step === "name"
+              ? "Complete Sign Up"
+              : "Verify OTP"}
+          </h2>
+          <p className="text-[#C9D6DF]/60 text-sm">
+            {step === "phone"
+              ? "Enter your phone number to continue"
+              : step === "name"
+              ? "Tell us your name"
+              : "Enter the OTP sent to your phone"}
+          </p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Phone Step */}
+        {step === "phone" && (
+          <form onSubmit={handlePhoneSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 9876543210"
+                className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                required
+              />
+              <p className="text-[#C9D6DF]/40 text-xs mt-2">
+                Include country code (e.g., +91 for India)
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full px-4 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            >
+              {loading ? "Sending OTP..." : "Continue"}
+            </button>
+          </form>
+        )}
+
+        {/* Name Step */}
+        {step === "name" && (
+          <form onSubmit={handleNameSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full px-4 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            >
+              {loading ? "Processing..." : "Continue to OTP"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("phone");
+                setName("");
+              }}
+              className="w-full px-4 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/10 transition-all duration-300"
+            >
+              Back
+            </button>
+          </form>
+        )}
+
+        {/* OTP Step */}
+        {step === "otp" && (
+          <form onSubmit={handleOtpSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                OTP
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                maxLength={6}
+                className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all tracking-widest text-center text-2xl font-semibold"
+                required
+              />
+            </div>
+            <p className="text-[#C9D6DF]/60 text-xs text-center">
+              Didn't receive? {' '}
+              <button 
+                type="button" 
+                onClick={handleResendOTP}
+                disabled={loading}
+                className="text-[#C9D6DF] hover:underline disabled:opacity-50"
+              >
+                Resend OTP
+              </button>
+            </p>
+            <button
+              type="submit"
+              disabled={loading || otp.length !== 6}
+              className="w-full px-4 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            >
+              {loading ? "Verifying..." : "Verify & Continue"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("phone");
+                setOtp("");
+                setConfirmationResult(null);
+              }}
+              className="w-full px-4 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/10 transition-all duration-300"
+            >
+              Back
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
