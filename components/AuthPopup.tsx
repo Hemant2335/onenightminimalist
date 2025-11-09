@@ -6,7 +6,10 @@ import {
   signInWithPhoneNumber, 
   ConfirmationResult ,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase"; 
+import { auth } from "@/lib/firebase";
+import { authAPI } from "@/lib/api";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'; 
 
 // --- Auth Popup Component ---
 export const AuthPopup = ({ 
@@ -72,7 +75,7 @@ export const AuthPopup = ({
       setConfirmationResult(confirmation);
       
       // Check if user exists in your database
-      const response = await fetch("/api/auth/check-user", {
+      const response = await fetch(`${API_BASE_URL}/auth/check-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: formattedPhone }),
@@ -85,7 +88,11 @@ export const AuthPopup = ({
         setStep("otp");
       } else {
         // New user - collect name first, then OTP
-        setStep("name");
+        if (type === "signup") {
+          setStep("name");
+        } else {
+          setError("User not found. Please sign up first.");
+        }
       }
     } catch (err: any) {
       console.error("Phone verification error:", err);
@@ -142,33 +149,56 @@ export const AuthPopup = ({
       // Get Firebase ID token
       const idToken = await user.getIdToken();
 
-      // Create/update user in your database
-      const response = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          firebaseToken: idToken,
-          phone: user.phoneNumber,
-          name: name || undefined,
-          uid: user.uid
-        }),
-      });
+      // Store token
+      localStorage.setItem("authToken", idToken);
 
-      const data = await response.json();
+      // Check if user exists
+      const checkData = await authAPI.checkUser(user.phoneNumber || '');
 
-      if (data.success) {
-        // Store token/session
-        localStorage.setItem("authToken", data.token);
+      if (checkData.exists) {
+        // Existing user - login
+        const loginData = await authAPI.login();
         
-        // Reset form
-        onClose();
-        setStep("phone");
-        setPhone("");
-        setOtp("");
-        setName("");
-        setConfirmationResult(null);
+        if (loginData.success) {
+          // Reset form and close
+          onClose();
+          setStep("phone");
+          setPhone("");
+          setOtp("");
+          setName("");
+          setConfirmationResult(null);
+          // Reload page to update auth state
+          window.location.reload();
+        } else {
+          setError("Login failed. Please try again.");
+        }
       } else {
-        setError("Authentication failed. Please try again.");
+        // New user - register (name should be collected)
+        if (!name) {
+          setError("Name is required for new users.");
+          setStep("name");
+          return;
+        }
+
+        const registerData = await authAPI.register(
+          user.uid,
+          user.phoneNumber || '',
+          name
+        );
+        
+        if (registerData.success) {
+          // Reset form and close
+          onClose();
+          setStep("phone");
+          setPhone("");
+          setOtp("");
+          setName("");
+          setConfirmationResult(null);
+          // Reload page to update auth state
+          window.location.reload();
+        } else {
+          setError("Registration failed. Please try again.");
+        }
       }
     } catch (err: any) {
       console.error("OTP verification error:", err);

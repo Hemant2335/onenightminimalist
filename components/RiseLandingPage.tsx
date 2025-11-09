@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { eventsAPI } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 // --- Event Countdown Timer Component ---
 const EventCountdown = ({ targetDate }: { targetDate: string }) => {
@@ -64,61 +66,32 @@ const EventCountdown = ({ targetDate }: { targetDate: string }) => {
   );
 };
 
-// --- MOCK DATA for the event cards ---
-const upcomingEvents = [
-  {
-    date: "Nov 14",
-    title: "The Global Fintech Summit 2025",
-    location: "The Metropolitan Center",
-    status: "Booking Open",
-    linkText: "Register",
-    isFeatured: true,
-  },
-  {
-    date: "Nov 22",
-    title: "Innovate & Create Workshop",
-    location: "Online (Zoom)",
-    status: "Booking Open",
-    linkText: "Register",
-    isFeatured: false,
-  },
-  {
-    date: "Dec 05",
-    title: "Winter Melodies Music Fest",
-    location: "City Park Amphitheater",
-    status: "Booking Open",
-    linkText: "Register",
-    isFeatured: false,
-  },
-  {
-    date: "Dec 12",
-    title: "Startup Pitch Night Dubai",
-    location: "Rise Innovation Hub",
-    status: "Booking Open",
-    linkText: "Register",
-    isFeatured: false,
-  },
-  {
-    date: "Jan 10",
-    title: "Future of AI Conference",
-    location: "Grand Convention Hall",
-    status: "Booking Open",
-    linkText: "Register",
-    isFeatured: false,
-  },
-  {
-    date: "Jan 28",
-    title: "Local Artisan Market",
-    location: "Downtown Plaza",
-    status: "Booking Open",
-    linkText: "Register",
-    isFeatured: false,
-  },
-];
+interface Event {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  status: string;
+  available_tickets: number;
+  total_tickets: number;
+}
 
-const ModernEventLandingPage = () => {
+interface ModernEventLandingPageProps {
+  onSignIn?: () => void;
+  onSignUp?: () => void;
+}
+
+const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPageProps) => {
+  const router = useRouter();
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   useEffect(() => {
     // Smooth scroll for anchor links
@@ -166,6 +139,32 @@ const ModernEventLandingPage = () => {
       observerRef.current?.disconnect();
     };
   }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await eventsAPI.getAllPublicEvents();
+      setEvents(response.events || []);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch events");
+      console.error("Error fetching events:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[date.getMonth()]} ${date.getDate()}`;
+  };
+
+  // Filter events: upcoming = events with available tickets
+  const upcomingEvents = events.filter(event => event.available_tickets > 0);
+  
+  // Show only first 3-4 events on homepage
+  const displayedEvents = upcomingEvents.slice(0, 4);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,19 +227,40 @@ const ModernEventLandingPage = () => {
               </div>
 
               {/* CTA Buttons */}
-              <div className="scroll-animate flex flex-col sm:flex-row gap-4 pt-4">
-                <a
-                  href="#events"
-                  className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 text-center flex items-center justify-center gap-2"
-                >
-                  Explore Events
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </a>
-                <button className="px-8 py-4 bg-transparent border-2 border-[#C9D6DF]/30 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/60 transition-all duration-300">
-                  Get Tickets
-                </button>
+              <div className="scroll-animate space-y-4 pt-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => router.push('/events')}
+                    className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 text-center flex items-center justify-center gap-2"
+                  >
+                    Explore Events
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/events')}
+                    className="px-8 py-4 bg-transparent border-2 border-[#C9D6DF]/30 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/60 transition-all duration-300"
+                  >
+                    Get Tickets
+                  </button>
+                </div>
+                
+                {/* Auth Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    onClick={onSignIn}
+                    className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-300 text-sm"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={onSignUp}
+                    className="px-6 py-3 bg-transparent border border-[#C9D6DF]/30 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/60 transition-all duration-300 text-sm"
+                  >
+                    Sign Up
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -297,45 +317,101 @@ const ModernEventLandingPage = () => {
           </div>
 
           {/* Events Grid */}
-          <div className="space-y-4">
-            {upcomingEvents.map((event, index) => (
-              <div
-                key={index}
-                className={`scroll-animate group rounded-lg p-6 backdrop-blur-sm border transition-all duration-300 ${
-                  event.isFeatured
-                    ? "bg-[#52616B]/20 border-[#C9D6DF]/40 hover:bg-[#52616B]/30 hover:border-[#C9D6DF]/60"
-                    : "bg-[#52616B]/10 border-[#C9D6DF]/15 hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30"
-                }`}
+          {loading ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">⏳</div>
+              <p className="text-[#C9D6DF]/60 text-lg">Loading events...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">⚠️</div>
+              <p className="text-[#C9D6DF]/60 text-lg mb-4">{error}</p>
+              <button
+                onClick={fetchEvents}
+                className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
               >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-[#C9D6DF] font-semibold">
-                        {event.date}
-                      </span>
-                      {event.isFeatured && (
-                        <span className="px-2 py-1 bg-[#C9D6DF]/15 text-[#C9D6DF] text-xs font-semibold rounded-md border border-[#C9D6DF]/30">
-                          Featured
+                Retry
+              </button>
+            </div>
+          ) : displayedEvents.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">📅</div>
+              <p className="text-[#C9D6DF]/60 text-lg">No upcoming events available</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4">
+                {displayedEvents.map((event, index) => (
+                  <div
+                    key={event.id}
+                    className={`scroll-animate group rounded-lg p-6 backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
+                      index === 0
+                        ? "bg-[#52616B]/20 border-[#C9D6DF]/40 hover:bg-[#52616B]/30 hover:border-[#C9D6DF]/60"
+                        : "bg-[#52616B]/10 border-[#C9D6DF]/15 hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30"
+                    }`}
+                    onClick={() => router.push(`/event/${event.id}`)}
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="text-[#C9D6DF] font-semibold">
+                            {formatEventDate(event.created_at)}
+                          </span>
+                          {index === 0 && (
+                            <span className="px-2 py-1 bg-[#C9D6DF]/15 text-[#C9D6DF] text-xs font-semibold rounded-md border border-[#C9D6DF]/30">
+                              Featured
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2 group-hover:text-[#C9D6DF] transition-colors">
+                          {event.name}
+                        </h3>
+                        {event.description && (
+                          <p className="text-[#C9D6DF]/60 text-sm mb-1">{event.description}</p>
+                        )}
+                        <p className="text-[#C9D6DF]/60 text-sm">
+                          {event.available_tickets} of {event.total_tickets} tickets available
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <span className={`px-3 py-1.5 text-[#C9D6DF] text-xs font-medium rounded-md border ${
+                          event.status === 'Booking Open'
+                            ? "bg-[#C9D6DF]/10 border-[#C9D6DF]/20"
+                            : "bg-[#ef4444]/10 border-[#ef4444]/20"
+                        }`}>
+                          {event.status}
                         </span>
-                      )}
+                        <button 
+                          className="px-5 py-2.5 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold text-sm hover:bg-[#F0F5F9] transition-all duration-200 whitespace-nowrap"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/event/${event.id}`);
+                          }}
+                        >
+                          View Details
+                        </button>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2 group-hover:text-[#C9D6DF] transition-colors">
-                      {event.title}
-                    </h3>
-                    <p className="text-[#C9D6DF]/60 text-sm">{event.location}</p>
                   </div>
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    <span className="px-3 py-1.5 bg-[#C9D6DF]/10 text-[#C9D6DF] text-xs font-medium rounded-md border border-[#C9D6DF]/20">
-                      {event.status}
-                    </span>
-                    <button className="px-5 py-2.5 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold text-sm hover:bg-[#F0F5F9] transition-all duration-200 whitespace-nowrap">
-                      {event.linkText}
-                    </button>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+              
+              {/* See More Button */}
+              {upcomingEvents.length > displayedEvents.length && (
+                <div className="text-center mt-12 scroll-animate">
+                  <button
+                    onClick={() => router.push('/events')}
+                    className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto"
+                  >
+                    See More Events
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </section>
 

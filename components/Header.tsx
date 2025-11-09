@@ -4,16 +4,23 @@ import Image from "next/image";
 import { useState } from "react";
 import { AuthPopup } from "./AuthPopup";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [authPopupType, setAuthPopupType] = useState<"signin" | "signup">("signin");
   const [showAuthPopup, setShowAuthPopup] = useState(false);
   const router = useRouter();
+  const { user, userProfile, isAdmin, logout } = useAuth();
 
   const handleAuthClick = (type: "signin" | "signup") => {
     setAuthPopupType(type);
     setShowAuthPopup(true);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
   };
 
   return (
@@ -54,20 +61,50 @@ export default function Header() {
                 </a>
               </div>
 
-              {/* Auth Buttons */}
+              {/* Auth Buttons / User Menu */}
               <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => handleAuthClick("signin")}
-                  className="hidden cursor-pointer sm:block px-5 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/50 transition-all duration-300"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => handleAuthClick("signup")}
-                  className="px-5 cursor-pointer py-2 text-sm font-medium bg-[#C9D6DF] text-[#111111] rounded-lg hover:bg-[#F0F5F9] transition-all duration-300"
-                >
-                  Sign Up
-                </button>
+                {user ? (
+                  <>
+                    <button
+                      onClick={() => router.push('/dashboard')}
+                      className="hidden sm:block px-5 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/50 transition-all duration-300"
+                    >
+                      Dashboard
+                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => router.push('/admin')}
+                        className="hidden sm:block px-5 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/50 transition-all duration-300"
+                      >
+                        Admin
+                      </button>
+                    )}
+                    <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg">
+                      <span className="text-sm text-[#C9D6DF]">{userProfile?.name || 'User'}</span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="px-5 py-2 text-sm font-medium bg-[#C9D6DF] text-[#111111] rounded-lg hover:bg-[#F0F5F9] transition-all duration-300"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleAuthClick("signin")}
+                      className="hidden cursor-pointer sm:block px-5 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/50 transition-all duration-300"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      onClick={() => handleAuthClick("signup")}
+                      className="px-5 cursor-pointer py-2 text-sm font-medium bg-[#C9D6DF] text-[#111111] rounded-lg hover:bg-[#F0F5F9] transition-all duration-300"
+                    >
+                      Sign Up
+                    </button>
+                  </>
+                )}
 
                 {/* Mobile Menu Button */}
                 <button
@@ -106,15 +143,49 @@ export default function Header() {
                 >
                   Contact
                 </a>
-                <button
-                  onClick={() => {
-                    handleAuthClick("signin");
-                    setIsOpen(false);
-                  }}
-                  className="w-full px-4 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 transition-all"
-                >
-                  Sign In
-                </button>
+                {user ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        router.push('/dashboard');
+                        setIsOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 transition-all"
+                    >
+                      Dashboard
+                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          router.push('/admin');
+                          setIsOpen(false);
+                        }}
+                        className="w-full px-4 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 transition-all"
+                      >
+                        Admin
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-sm font-medium bg-[#C9D6DF] text-[#111111] rounded-lg hover:bg-[#F0F5F9] transition-all"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      handleAuthClick("signin");
+                      setIsOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 transition-all"
+                  >
+                    Sign In
+                  </button>
+                )}
               </div>
             )}
           </div>
