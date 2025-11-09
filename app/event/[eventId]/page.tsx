@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { eventsAPI } from "@/lib/api";
 import CouponCard from "@/components/CouponCard";
+import { AuthPopup } from "@/components/AuthPopup";
+import { SuccessPopup } from "@/components/SuccessPopup";
 
 interface Coupon {
   id: string;
@@ -40,6 +42,10 @@ const EventDetailsPage = () => {
   const [error, setError] = useState("");
   const [hasAccess, setHasAccess] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [authPopupOpen, setAuthPopupOpen] = useState(false);
+  const [authType, setAuthType] = useState<"signin" | "signup">("signin");
+  const [successPopupOpen, setSuccessPopupOpen] = useState(false);
+  const [userHasTicket, setUserHasTicket] = useState(false);
 
   useEffect(() => {
     if (eventId) {
@@ -57,6 +63,30 @@ const EventDetailsPage = () => {
         const publicResponse = await eventsAPI.getPublicEventDetails(eventId);
         setEvent(publicResponse.event);
         setHasAccess(false);
+
+        // Check if user already has a ticket for this event
+        if (user) {
+          try {
+            const ticketsResponse = await eventsAPI.getUserTickets();
+            const hasTicket = ticketsResponse.tickets?.some(
+              (ticket: any) => ticket.event?.id === eventId
+            );
+            setUserHasTicket(hasTicket || false);
+            if (hasTicket) {
+              // User has ticket, fetch full event details
+              try {
+                const authResponse = await eventsAPI.getEventDetails(eventId);
+                setEvent(authResponse.event);
+                setHasAccess(true);
+              } catch (authErr: any) {
+                // User might not have access yet, keep public view
+              }
+            }
+          } catch (ticketErr) {
+            // Could not check tickets, assume no ticket
+            setUserHasTicket(false);
+          }
+        }
       } catch (publicErr: any) {
         // If public fails, try authenticated endpoint (user has ticket)
         if (user) {
@@ -64,6 +94,7 @@ const EventDetailsPage = () => {
             const authResponse = await eventsAPI.getEventDetails(eventId);
             setEvent(authResponse.event);
             setHasAccess(true);
+            setUserHasTicket(true);
           } catch (authErr: any) {
             setError(authErr.message || "Failed to fetch event details");
           }
@@ -79,8 +110,16 @@ const EventDetailsPage = () => {
   };
 
   const handleBookTicket = async () => {
+    // If user is not logged in, open auth popup
     if (!user) {
-      router.push("/");
+      setAuthType("signup");
+      setAuthPopupOpen(true);
+      return;
+    }
+
+    // Check if user already has a ticket
+    if (userHasTicket) {
+      setError("You have already booked a ticket for this event.");
       return;
     }
 
@@ -89,6 +128,8 @@ const EventDetailsPage = () => {
       setError("");
       const response = await eventsAPI.bookTicket(eventId);
       if (response.success) {
+        // Show success popup
+        setSuccessPopupOpen(true);
         // Refresh event details to show coupons
         await fetchEventDetails();
       }
@@ -97,6 +138,15 @@ const EventDetailsPage = () => {
     } finally {
       setBooking(false);
     }
+  };
+
+  // Handle auth popup close - refresh event details if user logged in
+  const handleAuthClose = () => {
+    setAuthPopupOpen(false);
+    // Wait a bit for auth state to update, then refresh
+    setTimeout(() => {
+      fetchEventDetails();
+    }, 500);
   };
 
   if (loading) {
@@ -140,7 +190,7 @@ const EventDetailsPage = () => {
             if (window.history.length > 1) {
               router.back();
             } else {
-              router.push("/event");
+              router.push("/events");
             }
           }}
           className="mb-8 flex items-center gap-2 text-[#C9D6DF] hover:text-[#F0F5F9] transition-colors"
@@ -191,9 +241,9 @@ const EventDetailsPage = () => {
             </div>
           )}
 
-          {/* Book Ticket Button (if user doesn't have access) */}
+          {/* Book Ticket Button */}
           {!hasAccess &&
-            user &&
+            !userHasTicket &&
             event.available_tickets !== undefined &&
             event.available_tickets > 0 && (
               <div className="mt-6">
@@ -223,33 +273,33 @@ const EventDetailsPage = () => {
                       Booking...
                     </>
                   ) : (
-                    <>🎫 Book Ticket Now</>
+                    <>🎫 Book Tickets</>
                   )}
                 </button>
               </div>
             )}
 
-          {!hasAccess && user && event.available_tickets === 0 && (
-            <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-red-400">
-                This event is sold out. No tickets available.
+          {/* User already has ticket message */}
+          {userHasTicket && !hasAccess && (
+            <div className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+              <p className="text-green-400">
+                ✓ You have already booked a ticket for this event. View your
+                ticket in the dashboard.
               </p>
             </div>
           )}
 
-          {!user && (
-            <div className="mt-6 p-4 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg">
-              <p className="text-[#C9D6DF] mb-2">
-                Please log in to book tickets and view coupons.
-              </p>
-              <button
-                onClick={() => router.push("/")}
-                className="px-6 py-2 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
-              >
-                Go to Login
-              </button>
-            </div>
-          )}
+          {/* Sold out message */}
+          {!hasAccess &&
+            !userHasTicket &&
+            event.available_tickets !== undefined &&
+            event.available_tickets === 0 && (
+              <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="text-red-400">
+                  This event is sold out. No tickets available.
+                </p>
+              </div>
+            )}
         </div>
 
         {/* Error Message */}
@@ -302,6 +352,25 @@ const EventDetailsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Auth Popup */}
+      <AuthPopup
+        isOpen={authPopupOpen}
+        onClose={handleAuthClose}
+        type={authType}
+      />
+
+      {/* Success Popup */}
+      <SuccessPopup
+        isOpen={successPopupOpen}
+        onClose={() => {
+          setSuccessPopupOpen(false);
+          // Optionally redirect to dashboard
+          // router.push('/dashboard');
+        }}
+        message="Ticket Booked Successfully! Your ticket has been saved to your account."
+        title="🎉 Success!"
+      />
     </div>
   );
 };

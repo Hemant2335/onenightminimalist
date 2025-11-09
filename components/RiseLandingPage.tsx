@@ -163,8 +163,11 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
   // Filter events: upcoming = events with available tickets
   const upcomingEvents = events.filter(event => event.available_tickets > 0);
   
-  // Show only first 3-4 events on homepage
-  const displayedEvents = upcomingEvents.slice(0, 4);
+  // Get the featured event (only ONE at a time - first event with available tickets)
+  const featuredEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
+  
+  // Show only first 3-4 events on homepage (excluding featured)
+  const displayedEvents = upcomingEvents.slice(1, 5);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +177,7 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
   return (
     <div className="min-h-screen bg-[#111111] font-sans">
 
-      {/* Hero Section - Enhanced Design */}
+      {/* Hero Section - Featured Event Banner */}
       <section className="relative min-h-screen flex items-center justify-center bg-[#111111] overflow-hidden pt-20 pb-20">
         {/* Dynamic Background Elements */}
         <div className="absolute inset-0">
@@ -185,109 +188,98 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
 
         {/* Content Container */}
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            
-            {/* Left Content */}
-            <div className="space-y-8">
-              {/* Featured Badge */}
-              
-
-              {/* Main Title */}
-              <div className="scroll-animate space-y-4">
-                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#F0F5F9] leading-tight">
-                  One Night
-                  <br />
-                  <span className="bg-gradient-to-r from-[#C9D6DF] to-[#52616B] bg-clip-text text-transparent">
-                    in Dubai
+          {loading ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">⏳</div>
+              <p className="text-[#C9D6DF]/60 text-lg">Loading featured event...</p>
+            </div>
+          ) : featuredEvent ? (
+            <div className="scroll-animate">
+              {/* Featured Event Banner */}
+              <div className="relative group rounded-2xl p-8 lg:p-12 bg-gradient-to-br from-[#52616B]/20 to-[#1E2022]/40 backdrop-blur-xl border border-[#C9D6DF]/30 hover:border-[#C9D6DF]/50 transition-all duration-300">
+                {/* Featured Badge */}
+                <div className="absolute top-6 right-6">
+                  <span className="px-3 py-1.5 bg-[#C9D6DF]/15 text-[#C9D6DF] text-xs font-semibold rounded-md border border-[#C9D6DF]/30">
+                    Featured Event
                   </span>
-                </h1>
+                </div>
 
-                {/* Subtitle */}
-                <p className="text-base sm:text-lg text-[#C9D6DF]/70 font-light max-w-md">
-                  Experience the most anticipated musical cultural festival of the year. Join thousands of music lovers for an unforgettable night.
-                </p>
-              </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+                  {/* Left Content */}
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#F0F5F9] leading-tight">
+                        {featuredEvent.name}
+                      </h1>
+                      {featuredEvent.description && (
+                        <p className="text-base sm:text-lg text-[#C9D6DF]/70 font-light max-w-md">
+                          {featuredEvent.description}
+                        </p>
+                      )}
+                    </div>
 
-              {/* Key Highlights */}
-              <div className="scroll-animate grid grid-cols-2 gap-4 pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-1 h-8 bg-[#C9D6DF]"></div>
-                  <div>
-                    <p className="text-[#C9D6DF]/60 text-xs tracking-wide">LOCATION</p>
-                    <p className="text-[#F0F5F9] font-medium">Dubai Arena</p>
+                    {/* Event Info */}
+                    <div className="flex flex-wrap items-center gap-4 pt-2">
+                      <span className="px-3 py-1.5 bg-[#C9D6DF]/10 border border-[#C9D6DF]/20 text-[#C9D6DF] text-sm font-medium rounded-md">
+                        {featuredEvent.status}
+                      </span>
+                      <span className="text-[#C9D6DF]/60 text-sm">
+                        {featuredEvent.available_tickets} of {featuredEvent.total_tickets} tickets available
+                      </span>
+                    </div>
+
+                    {/* View Details Button */}
+                    <div className="pt-4">
+                      <button
+                        onClick={() => router.push(`/event/${featuredEvent.id}`)}
+                        className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 flex items-center gap-2"
+                      >
+                        View Details
+                        <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-1 h-8 bg-[#C9D6DF]"></div>
-                  <div>
-                    <p className="text-[#C9D6DF]/60 text-xs tracking-wide">DATE</p>
-                    <p className="text-[#F0F5F9] font-medium">Dec 14, 2025</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* CTA Buttons */}
-              <div className="scroll-animate space-y-4 pt-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={() => router.push('/events')}
-                    className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 text-center flex items-center justify-center gap-2"
-                  >
-                    Explore Events
-                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </button>
-                  <button 
-                    onClick={() => router.push('/events')}
-                    className="px-8 py-4 bg-transparent border-2 border-[#C9D6DF]/30 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/60 transition-all duration-300"
-                  >
-                    Get Tickets
-                  </button>
-                </div>
-                
-                {/* Auth Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    onClick={onSignIn}
-                    className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-300 text-sm"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={onSignUp}
-                    className="px-6 py-3 bg-transparent border border-[#C9D6DF]/30 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/60 transition-all duration-300 text-sm"
-                  >
-                    Sign Up
-                  </button>
+                  {/* Right Side - Countdown & Stats */}
+                  <div className="space-y-6">
+                    {/* Countdown Card */}
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#C9D6DF]/20 to-[#52616B]/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
+                      <div className="relative bg-[#1E2022]/40 backdrop-blur-xl border border-[#C9D6DF]/20 rounded-2xl p-6 hover:border-[#C9D6DF]/40 transition-all duration-300">
+                        <p className="text-[#C9D6DF]/60 text-sm font-semibold tracking-wide mb-4">EVENT STARTS IN</p>
+                        <EventCountdown targetDate={featuredEvent.created_at} />
+                      </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="group p-4 bg-[#52616B]/10 border border-[#C9D6DF]/15 rounded-xl hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30 transition-all duration-300">
+                        <p className="text-2xl font-bold text-[#C9D6DF] mb-1">{featuredEvent.total_tickets}</p>
+                        <p className="text-[#C9D6DF]/60 text-xs">Total Tickets</p>
+                      </div>
+                      <div className="group p-4 bg-[#52616B]/10 border border-[#C9D6DF]/15 rounded-xl hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30 transition-all duration-300">
+                        <p className="text-2xl font-bold text-[#C9D6DF] mb-1">{featuredEvent.available_tickets}</p>
+                        <p className="text-[#C9D6DF]/60 text-xs">Available</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Right Side - Countdown & Stats */}
-            <div className="scroll-animate space-y-8">
-              {/* Countdown Card */}
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#C9D6DF]/20 to-[#52616B]/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
-                <div className="relative bg-[#1E2022]/40 backdrop-blur-xl border border-[#C9D6DF]/20 rounded-2xl p-8 hover:border-[#C9D6DF]/40 transition-all duration-300">
-                  <p className="text-[#C9D6DF]/60 text-sm font-semibold tracking-wide mb-6">EVENT STARTS IN</p>
-                  <EventCountdown targetDate="2025-12-14T20:00:00" />
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="group p-6 bg-[#52616B]/10 border border-[#C9D6DF]/15 rounded-xl hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30 transition-all duration-300">
-                  <p className="text-3xl font-bold text-[#C9D6DF] mb-1">15K+</p>
-                  <p className="text-[#C9D6DF]/60 text-sm">Attendees</p>
-                </div>
-                <div className="group p-6 bg-[#52616B]/10 border border-[#C9D6DF]/15 rounded-xl hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30 transition-all duration-300">
-                  <p className="text-3xl font-bold text-[#C9D6DF] mb-1">50+</p>
-                  <p className="text-[#C9D6DF]/60 text-sm">Artists</p>
-                </div>
-              </div>
+          ) : (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">📅</div>
+              <p className="text-[#C9D6DF]/60 text-lg">No featured events available</p>
+              <button
+                onClick={() => router.push('/events')}
+                className="mt-6 px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+              >
+                Explore All Events
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </section>
 

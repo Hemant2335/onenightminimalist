@@ -2,6 +2,7 @@
 
 import RiseLandingPage from '@/components/RiseLandingPage';
 import { AuthPopup } from '@/components/AuthPopup';
+import { TestAuth } from '@/components/TestAuth';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -43,6 +44,7 @@ export default function Home() {
         onClose={() => setAuthPopupOpen(false)} 
         type={authType}
       />
+      <TestAuth />
     </>
   );
 }

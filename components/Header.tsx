@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -8,7 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const [authPopupType, setAuthPopupType] = useState<"signin" | "signup">("signin");
+  const [authPopupType, setAuthPopupType] = useState<"signin" | "signup">(
+    "signin"
+  );
   const [showAuthPopup, setShowAuthPopup] = useState(false);
   const router = useRouter();
   const { user, userProfile, isAdmin, logout } = useAuth();
@@ -20,7 +22,7 @@ export default function Header() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/');
+    router.push("/");
   };
 
   return (
@@ -48,7 +50,7 @@ export default function Header() {
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center space-x-8">
                 <a
-                  href="#events"
+                  href="/events"
                   className="text-sm font-medium text-[#C9D6DF] hover:text-[#F0F5F9] transition-colors duration-300"
                 >
                   Events
@@ -66,21 +68,23 @@ export default function Header() {
                 {user ? (
                   <>
                     <button
-                      onClick={() => router.push('/dashboard')}
+                      onClick={() => router.push("/dashboard")}
                       className="hidden sm:block px-5 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/50 transition-all duration-300"
                     >
                       Dashboard
                     </button>
                     {isAdmin && (
                       <button
-                        onClick={() => router.push('/admin')}
+                        onClick={() => router.push("/admin")}
                         className="hidden sm:block px-5 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/50 transition-all duration-300"
                       >
                         Admin
                       </button>
                     )}
                     <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg">
-                      <span className="text-sm text-[#C9D6DF]">{userProfile?.name || 'User'}</span>
+                      <span className="text-sm text-[#C9D6DF]">
+                        {userProfile?.name || "User"}
+                      </span>
                     </div>
                     <button
                       onClick={handleLogout}
@@ -121,7 +125,11 @@ export default function Header() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d={isOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                      d={
+                        isOpen
+                          ? "M6 18L18 6M6 6l12 12"
+                          : "M4 6h16M4 12h16M4 18h16"
+                      }
                     />
                   </svg>
                 </button>
@@ -147,7 +155,7 @@ export default function Header() {
                   <>
                     <button
                       onClick={() => {
-                        router.push('/dashboard');
+                        router.push("/dashboard");
                         setIsOpen(false);
                       }}
                       className="w-full px-4 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 transition-all"
@@ -157,7 +165,7 @@ export default function Header() {
                     {isAdmin && (
                       <button
                         onClick={() => {
-                          router.push('/admin');
+                          router.push("/admin");
                           setIsOpen(false);
                         }}
                         className="w-full px-4 py-2 text-sm font-medium text-[#C9D6DF] border border-[#C9D6DF]/30 rounded-lg hover:bg-[#52616B]/20 transition-all"
