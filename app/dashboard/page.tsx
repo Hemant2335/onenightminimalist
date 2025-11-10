@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventsAPI } from '@/lib/api';
 import CouponCard from '@/components/CouponCard';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface Coupon {
   id: string;
@@ -114,8 +115,8 @@ const DashboardPage = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#111111] flex items-center justify-center">
-        <div className="text-[#C9D6DF] text-xl">Loading...</div>
+      <div className="min-h-screen bg-[#111111]">
+        <LoadingSpinner size="lg" text="Loading dashboard..." fullScreen={true} />
       </div>
     );
   }

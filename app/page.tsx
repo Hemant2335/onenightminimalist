@@ -3,6 +3,7 @@
 import RiseLandingPage from '@/components/RiseLandingPage';
 import { AuthPopup } from '@/components/AuthPopup';
 import { TestAuth } from '@/components/TestAuth';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -21,8 +22,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#111111] flex items-center justify-center">
-        <div className="text-[#C9D6DF] text-xl">Loading...</div>
+      <div className="min-h-screen bg-[#111111]">
+        <LoadingSpinner size="lg" text="Loading..." fullScreen={true} />
       </div>
     );
   }

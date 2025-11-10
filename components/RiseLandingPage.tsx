@@ -1,21 +1,63 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { eventsAPI } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { LoadingSpinner } from "./LoadingSpinner";
+import { EventSkeleton, EventSkeletonGrid } from "./EventSkeleton";
+
+// --- Interfaces and Types ---
+interface TimeLeft {
+  days: string;
+  hours: string;
+  minutes: string;
+  seconds: string;
+}
+
+interface Event {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  available_tickets: number;
+  total_tickets: number;
+  created_at: string;
+}
+
+interface EventsAPIResponse {
+  success: boolean;
+  events: Event[];
+}
+
+interface EventCountdownProps {
+  targetDate: string;
+}
+
+interface RiseLandingPageProps {
+  onSignIn?: () => void;
+  onSignUp?: () => void;
+}
 
 // --- Event Countdown Timer Component ---
-const EventCountdown = ({ targetDate }: { targetDate: string }) => {
-  const [timeLeft, setTimeLeft] = useState({
+const EventCountdown: React.FC<EventCountdownProps> = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
     days: "00",
     hours: "00",
     minutes: "00",
     seconds: "00",
   });
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const difference = new Date(targetDate).getTime() - new Date().getTime();
+  const calculateTimeLeft = useCallback(() => {
+    try {
+      const target = new Date(targetDate).getTime();
+      const now = new Date().getTime();
+      const difference = target - now;
 
       if (difference > 0) {
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
@@ -34,13 +76,18 @@ const EventCountdown = ({ targetDate }: { targetDate: string }) => {
           seconds: String(seconds).padStart(2, "0"),
         });
       } else {
-        clearInterval(timer);
         setTimeLeft({ days: "00", hours: "00", minutes: "00", seconds: "00" });
       }
-    }, 1000);
-
-    return () => clearInterval(timer);
+    } catch (error) {
+      console.error("Error calculating countdown:", error);
+    }
   }, [targetDate]);
+
+  useEffect(() => {
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, [calculateTimeLeft]);
 
   return (
     <div className="grid grid-cols-4 gap-3 sm:gap-4">
@@ -66,37 +113,160 @@ const EventCountdown = ({ targetDate }: { targetDate: string }) => {
   );
 };
 
-interface Event {
-  id: string;
-  name: string;
-  description?: string;
-  created_at: string;
-  status: string;
-  available_tickets: number;
-  total_tickets: number;
-}
-
-interface ModernEventLandingPageProps {
-  onSignIn?: () => void;
-  onSignUp?: () => void;
-}
-
-const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPageProps) => {
-  const router = useRouter();
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+// Custom hook for fetching events
+const useEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
 
-  useEffect(() => {
-    fetchEvents();
+  const fetchEvents = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      console.log("Fetching events...");
+
+      const response =
+        (await eventsAPI.getAllPublicEvents()) as EventsAPIResponse;
+      console.log("Raw API Response:", response);
+
+      let eventsData: Event[] = [];
+
+      if (response && response.success && Array.isArray(response.events)) {
+        eventsData = response.events;
+        console.log("Events data found:", eventsData.length);
+      } else {
+        console.warn("Unexpected API response structure:", response);
+        setError("Unexpected response format");
+      }
+
+      // Validate events have required fields
+      const validEvents = eventsData.filter(
+        (event) => event && event.id && event.name
+      );
+
+      setEvents(validEvents);
+
+      if (validEvents.length === 0) {
+        console.warn("No valid events found in response");
+        setError("No events available at the moment");
+      }
+    } catch (err) {
+      console.error("Error fetching events:", err);
+      setError((err as Error).message || "Failed to fetch events");
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  return { events, loading, error, refetch: fetchEvents };
+};
+
+const RiseLandingPage: React.FC<RiseLandingPageProps> = ({
+  onSignIn,
+  onSignUp,
+}) => {
+  const router = useRouter();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>("");
+
+  // Use custom hook for events
+  const { events, loading, error, refetch } = useEvents();
+
+  // Format event date - memoized
+  const formatEventDate = useCallback((dateString: string): string => {
+    try {
+      if (!dateString) return "Date TBD";
+
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return "Date TBD";
+      }
+
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      return `${
+        months[date.getMonth()]
+      } ${date.getDate()}, ${date.getFullYear()}`;
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Date TBD";
+    }
+  }, []);
+
+  // Get events to display - memoized
+  const { featuredEvent, displayedEvents } = useMemo(() => {
+    console.log("Getting events to display, total events:", events.length);
+
+    if (!events || events.length === 0) {
+      return { featuredEvent: null, displayedEvents: [] };
+    }
+
+    // Sort events by created_at (newest first)
+    const sortedEvents = [...events].sort((a, b) => {
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    });
+
+    // Featured event: first event
+    const featuredEvent = sortedEvents[0];
+    // Other events: exclude featured event
+    const displayedEvents = sortedEvents.slice(1);
+    console.log("Featured event:", featuredEvent);
+    return { featuredEvent, displayedEvents };
+  }, [events]);
+
+  // Handle event click - memoized
+  const handleEventClick = useCallback(
+    (eventId: string) => {
+      router.push(`/event/${eventId}`);
+    },
+    [router]
+  );
+
+  // Handle newsletter submit - memoized
+  const handleNewsletterSubmit = useCallback(() => {
+    if (email && email.includes("@")) {
+      console.log("Newsletter subscription:", email);
+      // Add your newsletter subscription logic here
+      setEmail("");
+      alert("Thanks for subscribing!");
+    } else {
+      alert("Please enter a valid email address");
+    }
+  }, [email]);
+
+  // Handle email input change - memoized
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEmail(e.target.value);
+    },
+    []
+  );
+
+  // Scroll animations setup
+  useEffect(() => {
     // Smooth scroll for anchor links
     const handleAnchorClick = (e: MouseEvent) => {
-      const target = e.target as HTMLAnchorElement;
+      const target = e.target as HTMLElement;
       if (
         target.tagName === "A" &&
         target.getAttribute("href")?.startsWith("#")
@@ -117,7 +287,7 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
     document.addEventListener("click", handleAnchorClick);
 
     // Animate elements on scroll
-    const observerOptions = {
+    const observerOptions: IntersectionObserverInit = {
       threshold: 0.1,
       rootMargin: "0px 0px -50px 0px",
     };
@@ -140,46 +310,19 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
     };
   }, []);
 
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const response = await eventsAPI.getAllPublicEvents();
-      setEvents(response.events || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch events");
-      console.error("Error fetching events:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${months[date.getMonth()]} ${date.getDate()}`;
-  };
-
-  // Filter events: upcoming = events with available tickets
-  const upcomingEvents = events.filter(event => event.available_tickets > 0);
-  
-  // Get the featured event (only ONE at a time - first event with available tickets)
-  const featuredEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
-  
-  // Show only first 3-4 events on homepage (excluding featured)
-  const displayedEvents = upcomingEvents.slice(1, 5);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form submitted");
-  };
+  console.log("Render state:", {
+    loading,
+    error,
+    eventsCount: events.length,
+    hasFeaturedEvent: !!featuredEvent,
+    displayedEventsCount: displayedEvents.length,
+  });
 
   return (
     <div className="min-h-screen bg-[#111111] font-sans">
-
       {/* Hero Section - Featured Event Banner */}
       <section className="relative min-h-screen flex items-center justify-center bg-[#111111] overflow-hidden pt-20 pb-20">
-        {/* Dynamic Background Elements */}
+        {/* Fixed Background Elements */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#C9D6DF]/10 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute bottom-1/4 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-[#52616B]/10 to-transparent rounded-full blur-3xl"></div>
@@ -187,11 +330,25 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 w-full">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 w-full">
           {loading ? (
             <div className="text-center py-20">
-              <div className="text-6xl mb-4">⏳</div>
-              <p className="text-[#C9D6DF]/60 text-lg">Loading featured event...</p>
+              <LoadingSpinner
+                size="lg"
+                text="Loading featured event..."
+                fullScreen={false}
+              />
+            </div>
+          ) : error ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">⚠️</div>
+              <p className="text-[#C9D6DF]/60 text-lg mb-4">{error}</p>
+              <button
+                onClick={refetch}
+                className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+              >
+                Retry
+              </button>
             </div>
           ) : featuredEvent ? (
             <div className="scroll-animate">
@@ -224,19 +381,33 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
                         {featuredEvent.status}
                       </span>
                       <span className="text-[#C9D6DF]/60 text-sm">
-                        {featuredEvent.available_tickets} of {featuredEvent.total_tickets} tickets available
+                        {featuredEvent.available_tickets} of{" "}
+                        {featuredEvent.total_tickets} tickets available
+                      </span>
+                      <span className="text-[#C9D6DF]/60 text-sm">
+                        {formatEventDate(featuredEvent.created_at)}
                       </span>
                     </div>
 
                     {/* View Details Button */}
                     <div className="pt-4">
                       <button
-                        onClick={() => router.push(`/event/${featuredEvent.id}`)}
+                        onClick={() => handleEventClick(featuredEvent.id)}
                         className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 flex items-center gap-2"
                       >
                         View Details
-                        <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        <svg
+                          className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 7l5 5m0 0l-5 5m5-5H6"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -248,7 +419,9 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
                     <div className="relative group">
                       <div className="absolute inset-0 bg-gradient-to-r from-[#C9D6DF]/20 to-[#52616B]/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
                       <div className="relative bg-[#1E2022]/40 backdrop-blur-xl border border-[#C9D6DF]/20 rounded-2xl p-6 hover:border-[#C9D6DF]/40 transition-all duration-300">
-                        <p className="text-[#C9D6DF]/60 text-sm font-semibold tracking-wide mb-4">EVENT STARTS IN</p>
+                        <p className="text-[#C9D6DF]/60 text-sm font-semibold tracking-wide mb-4">
+                          EVENT CREATED
+                        </p>
                         <EventCountdown targetDate={featuredEvent.created_at} />
                       </div>
                     </div>
@@ -256,11 +429,17 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="group p-4 bg-[#52616B]/10 border border-[#C9D6DF]/15 rounded-xl hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30 transition-all duration-300">
-                        <p className="text-2xl font-bold text-[#C9D6DF] mb-1">{featuredEvent.total_tickets}</p>
-                        <p className="text-[#C9D6DF]/60 text-xs">Total Tickets</p>
+                        <p className="text-2xl font-bold text-[#C9D6DF] mb-1">
+                          {featuredEvent.total_tickets}
+                        </p>
+                        <p className="text-[#C9D6DF]/60 text-xs">
+                          Total Tickets
+                        </p>
                       </div>
                       <div className="group p-4 bg-[#52616B]/10 border border-[#C9D6DF]/15 rounded-xl hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30 transition-all duration-300">
-                        <p className="text-2xl font-bold text-[#C9D6DF] mb-1">{featuredEvent.available_tickets}</p>
+                        <p className="text-2xl font-bold text-[#C9D6DF] mb-1">
+                          {featuredEvent.available_tickets}
+                        </p>
                         <p className="text-[#C9D6DF]/60 text-xs">Available</p>
                       </div>
                     </div>
@@ -271,141 +450,98 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
           ) : (
             <div className="text-center py-20">
               <div className="text-6xl mb-4">📅</div>
-              <p className="text-[#C9D6DF]/60 text-lg">No featured events available</p>
+              <p className="text-[#C9D6DF]/60 text-lg mb-4">
+                No events available
+              </p>
+              <p className="text-[#C9D6DF]/40 text-sm mb-6">
+                Check back later for exciting events!
+              </p>
               <button
-                onClick={() => router.push('/events')}
-                className="mt-6 px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
-              >
-                Explore All Events
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Events Section */}
-      <section id="events" className="py-24 bg-[#111111]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          {/* Section Header */}
-          <div className="text-center mb-20 scroll-animate">
-            <h2 className="text-5xl sm:text-6xl font-bold text-[#F0F5F9] mb-4">
-              Event <span className="text-[#C9D6DF]">Calendar</span>
-            </h2>
-            <p className="text-base text-[#C9D6DF]/60 max-w-2xl mx-auto">
-              Explore our upcoming events and secure your spot today
-            </p>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="flex justify-center mb-16 scroll-animate">
-            <div className="inline-flex rounded-lg bg-[#52616B]/10 p-1 border border-[#52616B]/20">
-              <button className="px-6 py-2.5 bg-[#52616B] text-[#F0F5F9] rounded-md font-medium text-sm transition-all">
-                Upcoming
-              </button>
-              <button className="px-6 py-2.5 text-[#C9D6DF] font-medium text-sm hover:text-[#F0F5F9] transition-all">
-                Attending
-              </button>
-            </div>
-          </div>
-
-          {/* Events Grid */}
-          {loading ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">⏳</div>
-              <p className="text-[#C9D6DF]/60 text-lg">Loading events...</p>
-            </div>
-          ) : error ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">⚠️</div>
-              <p className="text-[#C9D6DF]/60 text-lg mb-4">{error}</p>
-              <button
-                onClick={fetchEvents}
+                onClick={refetch}
                 className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
               >
-                Retry
+                Try Again
               </button>
             </div>
-          ) : displayedEvents.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">📅</div>
-              <p className="text-[#C9D6DF]/60 text-lg">No upcoming events available</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {displayedEvents.map((event, index) => (
-                  <div
-                    key={event.id}
-                    className={`scroll-animate group rounded-lg p-6 backdrop-blur-sm border transition-all duration-300 cursor-pointer ${
-                      index === 0
-                        ? "bg-[#52616B]/20 border-[#C9D6DF]/40 hover:bg-[#52616B]/30 hover:border-[#C9D6DF]/60"
-                        : "bg-[#52616B]/10 border-[#C9D6DF]/15 hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30"
-                    }`}
-                    onClick={() => router.push(`/event/${event.id}`)}
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-[#C9D6DF] font-semibold">
-                            {formatEventDate(event.created_at)}
-                          </span>
-                          {index === 0 && (
-                            <span className="px-2 py-1 bg-[#C9D6DF]/15 text-[#C9D6DF] text-xs font-semibold rounded-md border border-[#C9D6DF]/30">
-                              Featured
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2 group-hover:text-[#C9D6DF] transition-colors">
-                          {event.name}
-                        </h3>
-                        {event.description && (
-                          <p className="text-[#C9D6DF]/60 text-sm mb-1">{event.description}</p>
-                        )}
-                        <p className="text-[#C9D6DF]/60 text-sm">
-                          {event.available_tickets} of {event.total_tickets} tickets available
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4 flex-shrink-0">
-                        <span className={`px-3 py-1.5 text-[#C9D6DF] text-xs font-medium rounded-md border ${
-                          event.status === 'Booking Open'
-                            ? "bg-[#C9D6DF]/10 border-[#C9D6DF]/20"
-                            : "bg-[#ef4444]/10 border-[#ef4444]/20"
-                        }`}>
-                          {event.status}
-                        </span>
-                        <button 
-                          className="px-5 py-2.5 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold text-sm hover:bg-[#F0F5F9] transition-all duration-200 whitespace-nowrap"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/event/${event.id}`);
-                          }}
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* See More Button */}
-              {upcomingEvents.length > displayedEvents.length && (
-                <div className="text-center mt-12 scroll-animate">
-                  <button
-                    onClick={() => router.push('/events')}
-                    className="group px-8 py-4 bg-gradient-to-r from-[#C9D6DF] to-[#F0F5F9] text-[#111111] rounded-lg font-semibold hover:shadow-xl hover:shadow-[#C9D6DF]/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto"
-                  >
-                    See More Events
-                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </>
           )}
         </div>
       </section>
+
+      {/* Events Section - Show if we have other events */}
+      {displayedEvents.length > 0 && (
+        <section id="events" className="py-24 bg-[#111111]">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            {/* Section Header */}
+            <div className="text-center mb-20 scroll-animate">
+              <h2 className="text-5xl sm:text-6xl font-bold text-[#F0F5F9] mb-4">
+                More <span className="text-[#C9D6DF]">Events</span>
+                
+              </h2>
+              <p className="text-base text-[#C9D6DF]/60 max-w-2xl mx-auto">
+                Explore our upcoming events and secure your spot today
+              </p>
+            </div>
+
+            {/* Events Grid */}
+            <div className="space-y-4">
+              {displayedEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="scroll-animate group rounded-lg p-6 backdrop-blur-sm border transition-all duration-300 cursor-pointer bg-[#52616B]/10 border-[#C9D6DF]/15 hover:bg-[#52616B]/20 hover:border-[#C9D6DF]/30"
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-[#C9D6DF] font-semibold">
+                          {formatEventDate(event.created_at)}
+                        </span>
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-md border ${
+                            event.available_tickets > 0
+                              ? "bg-[#C9D6DF]/15 text-[#C9D6DF] border-[#C9D6DF]/30"
+                              : "bg-red-500/15 text-red-400 border-red-500/30"
+                          }`}
+                        >
+                          {event.available_tickets > 0
+                            ? "Available"
+                            : "Sold Out"}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2 group-hover:text-[#C9D6DF] transition-colors">
+                        {event.name}
+                      </h3>
+                      {event.description && (
+                        <p className="text-[#C9D6DF]/60 text-sm mb-1 line-clamp-2">
+                          {event.description}
+                        </p>
+                      )}
+                      <p className="text-[#C9D6DF]/60 text-sm">
+                        {event.available_tickets} of {event.total_tickets}{" "}
+                        tickets available • {event.status}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <button
+                        className="px-5 py-2.5 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold text-sm hover:bg-[#F0F5F9] transition-all duration-200 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEventClick(event.id);
+                        }}
+                        disabled={event.available_tickets === 0}
+                      >
+                        {event.available_tickets === 0
+                          ? "Sold Out"
+                          : "View Details"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Newsletter Section */}
       <section id="contact" className="py-24 bg-[#111111]">
@@ -417,61 +553,31 @@ const ModernEventLandingPage = ({ onSignIn, onSignUp }: ModernEventLandingPagePr
             <p className="text-base text-[#C9D6DF]/70 mb-12 max-w-2xl mx-auto">
               Get notified about new events and exclusive updates
             </p>
-            
-            <form 
-              onSubmit={handleSubmit}
-              className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-            >
+
+            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
               <input
                 type="email"
+                value={email}
+                onChange={handleEmailChange}
                 placeholder="your@email.com"
                 className="flex-1 px-5 py-3.5 bg-[#52616B]/15 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
                 aria-label="Email address"
-                required
               />
               <button
-                type="submit"
+                onClick={handleNewsletterSubmit}
                 className="px-6 py-3.5 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200 whitespace-nowrap"
               >
                 Subscribe
               </button>
-            </form>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 bg-[#111111] border-t border-[#52616B]/20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-[#C9D6DF]/50 text-sm">
-            ©️ 2024 EventHub. All rights reserved.
-          </p>
-        </div>
-      </footer>
-
       {/* Custom Styles */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 0.6s ease-out forwards;
-        }
-        
-        .scroll-animate {
-          opacity: 0;
-        }
-      `}</style>
+      
     </div>
   );
 };
 
-export default ModernEventLandingPage;
+export default RiseLandingPage;
