@@ -408,7 +408,7 @@ const AdminPanel = () => {
             onClick={() => {
               setShowCouponForm(true);
               setEditingCoupon(null);
-              setCouponForm({ title: '', description: '', code: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+              setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
               setCouponEventId('');
             }}
             className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
