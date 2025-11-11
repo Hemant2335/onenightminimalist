@@ -1,6 +1,6 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://onenightbackend-3-0.onrender.com/api";
+  "https://onenightbackend-3-0.onrender.com/api";
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
