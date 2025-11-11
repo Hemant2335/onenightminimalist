@@ -27,7 +27,7 @@ export default function Header() {
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 w-full flex justify-center px-4 pt-4 z-40">
+      <div className="fixed top-0 left-0 right-0 w-full flex justify-center px-4 py-4 z-40">
         <nav className="backdrop-blur-xl bg-[#1E2022]/60 border border-[#C9D6DF]/20 rounded-xl max-w-6xl w-full hover:border-[#C9D6DF]/30 transition-all duration-300 shadow-xl shadow-black/20">
           <div className="px-4 py-2 lg:px-6 lg:py-2.5">
             <div className="flex items-center justify-between">

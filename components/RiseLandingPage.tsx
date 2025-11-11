@@ -319,7 +319,7 @@ const RiseLandingPage: React.FC<RiseLandingPageProps> = ({
   });
 
   return (
-    <div className="min-h-screen bg-[#111111] font-sans">
+    <div className="min-h-screen  bg-[#111111] font-sans">
       {/* Hero Section - Featured Event Banner */}
       <section className="relative min-h-screen flex items-center justify-center bg-[#111111] overflow-hidden pt-20 pb-20">
         {/* Fixed Background Elements */}

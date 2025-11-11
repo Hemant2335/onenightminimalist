@@ -20,6 +20,8 @@ interface Coupon {
   valid_until?: string;
   terms?: string;
   created_at: string;
+  is_redeemed?: boolean;
+  redeemed_at?: string;
 }
 
 interface Event {

@@ -1,6 +1,6 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://onenightbackend-3-0.onrender.com/api";
+  "http://onenightbackend-3-0.onrender.com/api";
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
@@ -110,6 +110,20 @@ export const eventsAPI = {
     apiRequest(`/events/${eventId}`, {
       method: "GET",
     }),
+
+  getUserCoupons: () =>
+    apiRequest("/events/coupons", {
+      method: "GET",
+    }),
+
+  redeemCoupon: (couponId: string) =>
+    apiRequest(`/events/coupons/${couponId}/redeem`, {
+      method: "POST",
+    }),
+  getWalletPass: (couponId: string) =>
+    apiRequest(`/events/coupons/${couponId}/wallet`, {
+      method: "GET",
+    }),
 };
 
 // Admin API
@@ -152,7 +166,6 @@ export const adminAPI = {
     eventId: string,
     title: string,
     description?: string,
-    code?: string,
     discount?: number,
     image_url?: string,
     valid_from?: string,
@@ -164,7 +177,6 @@ export const adminAPI = {
       body: JSON.stringify({
         title,
         description,
-        code,
         discount,
         image_url,
         valid_from,
@@ -182,7 +194,6 @@ export const adminAPI = {
     couponId: string,
     title: string,
     description?: string,
-    code?: string,
     discount?: number,
     image_url?: string,
     valid_from?: string,
@@ -194,7 +205,6 @@ export const adminAPI = {
       body: JSON.stringify({
         title,
         description,
-        code,
         discount,
         image_url,
         valid_from,

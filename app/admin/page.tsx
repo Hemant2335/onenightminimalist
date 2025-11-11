@@ -58,7 +58,6 @@ const AdminPanel = () => {
   const [couponForm, setCouponForm] = useState({ 
     title: '', 
     description: '', 
-    code: '', 
     discount: '', 
     image_url: '',
     valid_from: '',
@@ -230,7 +229,6 @@ const AdminPanel = () => {
         couponEventId,
         couponForm.title,
         couponForm.description || undefined,
-        couponForm.code || undefined,
         couponForm.discount ? parseFloat(couponForm.discount) : undefined,
         couponForm.image_url || undefined,
         couponForm.valid_from || undefined,
@@ -238,8 +236,8 @@ const AdminPanel = () => {
         couponForm.terms || undefined
       );
       if (response.success) {
-        setSuccess('Coupon created successfully!');
-        setCouponForm({ title: '', description: '', code: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+        setSuccess('Coupon template created successfully! Codes will be generated when users book tickets.');
+        setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
         setCouponEventId('');
         setShowCouponForm(false);
         fetchEvents();
@@ -263,7 +261,6 @@ const AdminPanel = () => {
         editingCoupon.id,
         couponForm.title,
         couponForm.description || undefined,
-        couponForm.code || undefined,
         couponForm.discount ? parseFloat(couponForm.discount) : undefined,
         couponForm.image_url || undefined,
         couponForm.valid_from || undefined,
@@ -271,8 +268,8 @@ const AdminPanel = () => {
         couponForm.terms || undefined
       );
       if (response.success) {
-        setSuccess('Coupon updated successfully!');
-        setCouponForm({ title: '', description: '', code: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+        setSuccess('Coupon template updated successfully!');
+        setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
         setEditingCoupon(null);
         setShowCouponForm(false);
         if (viewingCoupons) {
@@ -322,7 +319,6 @@ const AdminPanel = () => {
     setCouponForm({
       title: coupon.title,
       description: coupon.description || '',
-      code: coupon.code || '',
       discount: coupon.discount?.toString() || '',
       image_url: coupon.image_url || '',
       valid_from: coupon.valid_from ? new Date(coupon.valid_from).toISOString().split('T')[0] : '',
@@ -682,34 +678,21 @@ const AdminPanel = () => {
                 />
                 <p className="text-xs text-[#C9D6DF]/50 mt-1">Upload image to Firebase Storage and paste URL here</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                    Coupon Code
-                  </label>
-                  <input
-                    type="text"
-                    value={couponForm.code}
-                    onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value })}
-                    placeholder="Enter coupon code"
-                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                    Discount (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={couponForm.discount}
-                    onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
-                    placeholder="Enter discount percentage"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                  />
-                </div>
+              <div>
+                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                  Discount (%)
+                </label>
+                <input
+                  type="number"
+                  value={couponForm.discount}
+                  onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
+                  placeholder="Enter discount percentage"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                />
+                <p className="text-xs text-[#C9D6DF]/50 mt-1">Note: Unique coupon codes will be automatically generated when users book tickets for this event.</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -759,7 +742,7 @@ const AdminPanel = () => {
                   onClick={() => {
                     setShowCouponForm(false);
                     setEditingCoupon(null);
-                    setCouponForm({ title: '', description: '', code: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+                    setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
                     setCouponEventId('');
                   }}
                   className="px-6 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 transition-all duration-200"
@@ -852,9 +835,7 @@ const AdminPanel = () => {
                     {coupon.description && (
                       <p className="text-[#C9D6DF]/60 text-sm mb-2">{coupon.description}</p>
                     )}
-                    {coupon.code && (
-                      <p className="text-[#C9D6DF] font-mono text-sm mb-1">Code: {coupon.code}</p>
-                    )}
+                    <p className="text-[#C9D6DF]/60 text-xs mb-1">Template - Codes generated on ticket booking</p>
                     {coupon.discount && (
                       <p className="text-[#C9D6DF] text-sm mb-2">Discount: {coupon.discount}%</p>
                     )}

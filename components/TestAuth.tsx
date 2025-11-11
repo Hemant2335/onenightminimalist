@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://onenightbackend-3-0.onrender.com/api";
+  "http://onenightbackend-3-0.onrender.com/api";
 
 export const TestAuth = () => {
   const [phone, setPhone] = useState("");
