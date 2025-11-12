@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { adminAPI } from '@/lib/api';
 import { Modal } from '@/components/Modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Event {
   id: string;
@@ -418,17 +425,22 @@ const AdminPanel = () => {
           </button>
         </div>
 
-        {/* Event Form Modal */}
-        <Modal
-          isOpen={showEventForm}
-          onClose={() => {
+        {/* Event Form Dialog */}
+        <Dialog open={showEventForm} onOpenChange={(open) => {
+          if (!open) {
             setShowEventForm(false);
             setEditingEvent(null);
             setEventForm({ name: '', description: '' });
-          }}
-          title={editingEvent ? 'Edit Event' : 'Create Event'}
-        >
-          <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingEvent ? 'Edit Event' : 'Create Event'}</DialogTitle>
+              <DialogDescription>
+                {editingEvent ? 'Update the event details below.' : 'Create a new event for ticket management.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
             <div>
               <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
                 Event Name *
@@ -474,20 +486,26 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
-        </Modal>
+          </DialogContent>
+        </Dialog>
 
-        {/* Auto-Generate Tickets Form Modal */}
-        <Modal
-          isOpen={showAutoGenerateForm}
-          onClose={() => {
+        {/* Auto-Generate Tickets Form Dialog */}
+        <Dialog open={showAutoGenerateForm} onOpenChange={(open) => {
+          if (!open) {
             setShowAutoGenerateForm(false);
             setAutoGenerateEventId('');
             setTicketCount('');
             setTicketPrefix('TICKET');
-          }}
-          title="Auto-Generate Tickets"
-        >
-          <form onSubmit={handleAutoGenerateTickets} className="space-y-4">
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Auto-Generate Tickets</DialogTitle>
+              <DialogDescription>
+                Generate multiple tickets automatically for an event.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAutoGenerateTickets} className="space-y-4">
             <div>
               <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
                 Select Event *
@@ -561,20 +579,26 @@ const AdminPanel = () => {
                   Cancel
                 </button>
               </div>
-            </form>
-        </Modal>
+              </form>
+            </DialogContent>
+          </Dialog>
 
-        {/* Ticket Form Modal */}
-        <Modal
-          isOpen={showTicketForm}
-          onClose={() => {
+        {/* Ticket Form Dialog */}
+        <Dialog open={showTicketForm} onOpenChange={(open) => {
+          if (!open) {
             setShowTicketForm(false);
             setSelectedEventId('');
             setTicketNumbers('');
-          }}
-          title="Add Tickets"
-        >
-          <form onSubmit={handleAddTickets} className="space-y-4">
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Tickets</DialogTitle>
+              <DialogDescription>
+                Add multiple ticket numbers to an event.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAddTickets} className="space-y-4">
             <div>
               <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
                 Select Event *
@@ -626,21 +650,26 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
-        </Modal>
+          </DialogContent>
+        </Dialog>
 
-        {/* Coupon Form Modal */}
-        <Modal
-          isOpen={showCouponForm}
-          onClose={() => {
+        {/* Coupon Form Dialog */}
+        <Dialog open={showCouponForm} onOpenChange={(open) => {
+          if (!open) {
             setShowCouponForm(false);
             setEditingCoupon(null);
             setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
             setCouponEventId('');
-          }}
-          title={editingCoupon ? 'Edit Coupon' : 'Create Coupon'}
-          size="lg"
-        >
-          <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-6">
+          }
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingCoupon ? 'Edit Coupon' : 'Create Coupon'}</DialogTitle>
+              <DialogDescription>
+                {editingCoupon ? 'Update the coupon details below.' : 'Create a new coupon template for ticket bookings.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-6">
             {/* Event Selection */}
             {!editingCoupon && (
               <div className="space-y-2">
@@ -806,7 +835,8 @@ const AdminPanel = () => {
               </button>
             </div>
           </form>
-        </Modal>
+          </DialogContent>
+        </Dialog>
 
         {/* Events List */}
         <div className="space-y-6">
