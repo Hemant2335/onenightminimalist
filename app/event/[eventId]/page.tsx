@@ -152,13 +152,13 @@ const EventDetailsPage = () => {
     }, 500);
   };
 
-  if (loading) {
+  if (loading && !event) {
     return (
       <div className="min-h-screen bg-[#111111]">
         <LoadingSpinner
           size="lg"
           text="Loading event details..."
-          fullScreen={true}
+          overlay={true}
         />
       </div>
     );
@@ -188,7 +188,14 @@ const EventDetailsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] py-20">
+    <div className="min-h-screen bg-[#111111] py-20 relative">
+      {loading && (
+        <LoadingSpinner
+          size="lg"
+          text="Refreshing event details..."
+          overlay={true}
+        />
+      )}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Back Button */}
         <button
