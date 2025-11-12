@@ -13,7 +13,7 @@ export const TestAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  const { refreshProfile } = useAuth();
+  const { loginWithTestToken } = useAuth();
 
   const handleTestLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +31,8 @@ export const TestAuth = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Store test token
-        localStorage.setItem("authToken", data.token);
-
-        // Refresh profile to update auth context
-        await refreshProfile();
+        // Use the context method to handle test login
+        await loginWithTestToken(data.token);
 
         // Redirect to dashboard
         router.push("/dashboard");

@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   setUserProfile: (profile: any) => void;
   refreshProfile: () => Promise<void>;
+  loginWithTestToken: (token: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const profile = await authAPI.profile();
       setUserProfile(profile.user);
-      
+
       // Check admin status
       try {
         const adminCheck = await authAPI.checkAdmin();
@@ -40,6 +41,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserProfile(null);
       setIsAdmin(false);
     }
+  };
+
+  const loginWithTestToken = async (token: string) => {
+    const mockUser = {
+      uid: token.replace('test-token-', ''),
+      phoneNumber: null,
+      displayName: null,
+    } as User;
+    setUser(mockUser);
+    localStorage.setItem('authToken', token);
+    await refreshProfile();
   };
 
   useEffect(() => {
@@ -122,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         setUserProfile,
         refreshProfile,
+        loginWithTestToken,
         logout,
       }}
     >
