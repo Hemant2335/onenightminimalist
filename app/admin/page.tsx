@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { adminAPI } from '@/lib/api';
+import { Modal } from '@/components/Modal';
 
 interface Event {
   id: string;
@@ -417,17 +418,21 @@ const AdminPanel = () => {
           </button>
         </div>
 
-        {/* Event Form */}
-        {showEventForm && (
-          <div className="mb-8 p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
-            <h2 className="text-2xl font-bold text-[#F0F5F9] mb-4">
-              {editingEvent ? 'Edit Event' : 'Create Event'}
-            </h2>
-            <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                  Event Name *
-                </label>
+        {/* Event Form Modal */}
+        <Modal
+          isOpen={showEventForm}
+          onClose={() => {
+            setShowEventForm(false);
+            setEditingEvent(null);
+            setEventForm({ name: '', description: '' });
+          }}
+          title={editingEvent ? 'Edit Event' : 'Create Event'}
+        >
+          <form onSubmit={editingEvent ? handleUpdateEvent : handleCreateEvent} className="space-y-4">
+            <div>
+              <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                Event Name *
+              </label>
                 <input
                   type="text"
                   value={eventForm.name}
@@ -469,18 +474,24 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
-          </div>
-        )}
+        </Modal>
 
-        {/* Auto-Generate Tickets Form */}
-        {showAutoGenerateForm && (
-          <div className="mb-8 p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
-            <h2 className="text-2xl font-bold text-[#F0F5F9] mb-4">Auto-Generate Tickets</h2>
-            <form onSubmit={handleAutoGenerateTickets} className="space-y-4">
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                  Select Event *
-                </label>
+        {/* Auto-Generate Tickets Form Modal */}
+        <Modal
+          isOpen={showAutoGenerateForm}
+          onClose={() => {
+            setShowAutoGenerateForm(false);
+            setAutoGenerateEventId('');
+            setTicketCount('');
+            setTicketPrefix('TICKET');
+          }}
+          title="Auto-Generate Tickets"
+        >
+          <form onSubmit={handleAutoGenerateTickets} className="space-y-4">
+            <div>
+              <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                Select Event *
+              </label>
                 <select
                   value={autoGenerateEventId}
                   onChange={(e) => setAutoGenerateEventId(e.target.value)}
@@ -551,18 +562,23 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
-          </div>
-        )}
+        </Modal>
 
-        {/* Ticket Form */}
-        {showTicketForm && (
-          <div className="mb-8 p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
-            <h2 className="text-2xl font-bold text-[#F0F5F9] mb-4">Add Tickets</h2>
-            <form onSubmit={handleAddTickets} className="space-y-4">
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                  Select Event *
-                </label>
+        {/* Ticket Form Modal */}
+        <Modal
+          isOpen={showTicketForm}
+          onClose={() => {
+            setShowTicketForm(false);
+            setSelectedEventId('');
+            setTicketNumbers('');
+          }}
+          title="Add Tickets"
+        >
+          <form onSubmit={handleAddTickets} className="space-y-4">
+            <div>
+              <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                Select Event *
+              </label>
                 <select
                   value={selectedEventId}
                   onChange={(e) => setSelectedEventId(e.target.value)}
@@ -610,21 +626,25 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
-          </div>
-        )}
+        </Modal>
 
-        {/* Coupon Form */}
-        {showCouponForm && (
-          <div className="mb-8 p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
-            <h2 className="text-2xl font-bold text-[#F0F5F9] mb-4">
-              {editingCoupon ? 'Edit Coupon' : 'Create Coupon'}
-            </h2>
-            <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-4">
-              {!editingCoupon && (
-                <div>
-                  <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                    Select Event *
-                  </label>
+        {/* Coupon Form Modal */}
+        <Modal
+          isOpen={showCouponForm}
+          onClose={() => {
+            setShowCouponForm(false);
+            setEditingCoupon(null);
+            setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+            setCouponEventId('');
+          }}
+          title={editingCoupon ? 'Edit Coupon' : 'Create Coupon'}
+        >
+          <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-4">
+            {!editingCoupon && (
+              <div>
+                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                  Select Event *
+                </label>
                   <select
                     value={couponEventId}
                     onChange={(e) => setCouponEventId(e.target.value)}
@@ -751,8 +771,7 @@ const AdminPanel = () => {
                 </button>
               </div>
             </form>
-          </div>
-        )}
+        </Modal>
 
         {/* Events List */}
         <div className="space-y-6">
