@@ -20,17 +20,10 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#111111]">
-        <LoadingSpinner size="lg" text="Loading..." fullScreen={true} />
-      </div>
-    );
-  }
-
   return (
     <>
-      <RiseLandingPage 
+      {loading && <LoadingSpinner size="lg" text="Loading..." overlay={true} />}
+      <RiseLandingPage
         onSignIn={() => {
           setAuthType('signin');
           setAuthPopupOpen(true);

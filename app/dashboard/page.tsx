@@ -115,10 +115,14 @@ const DashboardPage = () => {
     router.push(`/event/${eventId}`);
   };
 
-  if (authLoading || loading) {
+  if (authLoading || (loading && events.length === 0)) {
     return (
       <div className="min-h-screen bg-[#111111]">
-        <LoadingSpinner size="lg" text="Loading dashboard..." fullScreen={true} />
+        <LoadingSpinner
+          size="lg"
+          text="Loading dashboard..."
+          overlay={true}
+        />
       </div>
     );
   }
@@ -128,7 +132,10 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] py-20">
+    <div className="min-h-screen bg-[#111111] py-20 relative">
+      {loading && (
+        <LoadingSpinner size="lg" text="Refreshing data..." overlay={true} />
+      )}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="mb-12">

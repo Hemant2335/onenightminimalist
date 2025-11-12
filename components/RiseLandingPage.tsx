@@ -320,6 +320,13 @@ const RiseLandingPage: React.FC<RiseLandingPageProps> = ({
 
   return (
     <div className="min-h-screen  bg-[#111111] font-sans">
+      {loading && featuredEvent && (
+        <LoadingSpinner
+          size="lg"
+          text="Refreshing events..."
+          overlay={true}
+        />
+      )}
       {/* Hero Section - Featured Event Banner */}
       <section className="relative min-h-screen flex items-center justify-center bg-[#111111] overflow-hidden pt-20 pb-20">
         {/* Fixed Background Elements */}
@@ -331,15 +338,16 @@ const RiseLandingPage: React.FC<RiseLandingPageProps> = ({
 
         {/* Content Container */}
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 w-full">
-          {loading ? (
+          {loading && !featuredEvent && (
             <div className="text-center py-20">
               <LoadingSpinner
                 size="lg"
                 text="Loading featured event..."
-                fullScreen={false}
+                overlay={false}
               />
             </div>
-          ) : error ? (
+          )}
+          {error && !featuredEvent && (
             <div className="text-center py-20">
               <div className="text-6xl mb-4">⚠️</div>
               <p className="text-[#C9D6DF]/60 text-lg mb-4">{error}</p>
@@ -350,7 +358,8 @@ const RiseLandingPage: React.FC<RiseLandingPageProps> = ({
                 Retry
               </button>
             </div>
-          ) : featuredEvent ? (
+          )}
+          {featuredEvent && (
             <div className="scroll-animate">
               {/* Featured Event Banner */}
               <div className="relative group rounded-2xl p-8 lg:p-12 bg-gradient-to-br from-[#52616B]/20 to-[#1E2022]/40 backdrop-blur-xl border border-[#C9D6DF]/30 hover:border-[#C9D6DF]/50 transition-all duration-300">
@@ -447,7 +456,8 @@ const RiseLandingPage: React.FC<RiseLandingPageProps> = ({
                 </div>
               </div>
             </div>
-          ) : (
+          )}
+          {!loading && !error && !featuredEvent && (
             <div className="text-center py-20">
               <div className="text-6xl mb-4">📅</div>
               <p className="text-[#C9D6DF]/60 text-lg mb-4">
