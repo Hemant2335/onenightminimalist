@@ -638,85 +638,111 @@ const AdminPanel = () => {
             setCouponEventId('');
           }}
           title={editingCoupon ? 'Edit Coupon' : 'Create Coupon'}
+          size="lg"
         >
-          <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-4">
+          <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-6">
+            {/* Event Selection */}
             {!editingCoupon && (
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+              <div className="space-y-2">
+                <label className="block text-[#C9D6DF] text-sm font-medium">
                   Select Event *
                 </label>
-                  <select
-                    value={couponEventId}
-                    onChange={(e) => setCouponEventId(e.target.value)}
-                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                    required={!editingCoupon}
-                  >
-                    <option value="">Select an event</option>
-                    {events.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                <select
+                  value={couponEventId}
+                  onChange={(e) => setCouponEventId(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                  required={!editingCoupon}
+                >
+                  <option value="">Select an event</option>
+                  {events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Basic Information</h3>
+
+              <div className="space-y-2">
+                <label className="block text-[#C9D6DF] text-sm font-medium">
                   Coupon Title *
                 </label>
                 <input
                   type="text"
                   value={couponForm.title}
                   onChange={(e) => setCouponForm({ ...couponForm, title: e.target.value })}
-                  placeholder="Enter coupon title"
+                  placeholder="e.g., Early Bird Discount"
                   className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+
+              <div className="space-y-2">
+                <label className="block text-[#C9D6DF] text-sm font-medium">
                   Description
                 </label>
                 <textarea
                   value={couponForm.description}
                   onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })}
-                  placeholder="Enter coupon description"
-                  rows={3}
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                  placeholder="Brief description of the coupon offer"
+                  rows={2}
+                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all resize-none"
                 />
               </div>
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                  Image URL
-                </label>
-                <input
-                  type="url"
-                  value={couponForm.image_url}
-                  onChange={(e) => setCouponForm({ ...couponForm, image_url: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                />
-                <p className="text-xs text-[#C9D6DF]/50 mt-1">Upload image to Firebase Storage and paste URL here</p>
+            </div>
+
+            {/* Discount & Image */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Discount Details</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Discount (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={couponForm.discount}
+                    onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
+                    placeholder="20"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Image URL
+                  </label>
+                  <input
+                    type="url"
+                    value={couponForm.image_url}
+                    onChange={(e) => setCouponForm({ ...couponForm, image_url: e.target.value })}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
-                  Discount (%)
-                </label>
-                <input
-                  type="number"
-                  value={couponForm.discount}
-                  onChange={(e) => setCouponForm({ ...couponForm, discount: e.target.value })}
-                  placeholder="Enter discount percentage"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                />
-                <p className="text-xs text-[#C9D6DF]/50 mt-1">Note: Unique coupon codes will be automatically generated when users book tickets for this event.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+
+              <p className="text-xs text-[#C9D6DF]/60 bg-[#52616B]/10 p-3 rounded-lg">
+                💡 Unique coupon codes will be automatically generated when users book tickets for this event.
+                Upload images to Firebase Storage and paste the URL here.
+              </p>
+            </div>
+
+            {/* Validity Period */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Validity Period</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
                     Valid From
                   </label>
                   <input
@@ -726,8 +752,8 @@ const AdminPanel = () => {
                     className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
                     Valid Until
                   </label>
                   <input
@@ -738,39 +764,48 @@ const AdminPanel = () => {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
+            </div>
+
+            {/* Terms & Conditions */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Terms & Conditions</h3>
+
+              <div className="space-y-2">
+                <label className="block text-[#C9D6DF] text-sm font-medium">
                   Terms & Conditions
                 </label>
                 <textarea
                   value={couponForm.terms}
                   onChange={(e) => setCouponForm({ ...couponForm, terms: e.target.value })}
-                  placeholder="Enter terms and conditions"
+                  placeholder="Specify any terms and conditions for using this coupon"
                   rows={3}
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all resize-none"
                 />
               </div>
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
-                >
-                  {editingCoupon ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCouponForm(false);
-                    setEditingCoupon(null);
-                    setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
-                    setCouponEventId('');
-                  }}
-                  className="px-6 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#C9D6DF]/20">
+              <button
+                type="submit"
+                className="flex-1 px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+              >
+                {editingCoupon ? 'Update Coupon' : 'Create Coupon'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCouponForm(false);
+                  setEditingCoupon(null);
+                  setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+                  setCouponEventId('');
+                }}
+                className="px-6 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 transition-all duration-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </Modal>
 
         {/* Events List */}
