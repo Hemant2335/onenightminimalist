@@ -133,7 +133,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] py-20 relative">
+    <div className="min-h-screen bg-[#111111] pt-32 pb-20 relative">
       {loading && (
         <LoadingSpinner size="lg" text="Refreshing data..." overlay={true} />
       )}
