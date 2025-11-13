@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Event {
   id: string;
@@ -66,7 +73,6 @@ interface WizardData {
     };
   };
   coupons: Array<{
-    templateId?: string;
     title: string;
     description: string;
     discount: string;
@@ -550,7 +556,7 @@ const AdminPanel = () => {
           coupon.valid_from || undefined,
           coupon.valid_until || undefined,
           coupon.terms || undefined,
-          coupon.templateId || undefined
+          undefined
         );
       }
 
@@ -757,19 +763,18 @@ const AdminPanel = () => {
               <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
                 Select Event *
               </label>
-                <select
-                  value={autoGenerateEventId}
-                  onChange={(e) => setAutoGenerateEventId(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                  required
-                >
-                  <option value="">Select an event</option>
+              <Select value={autoGenerateEventId} onValueChange={setAutoGenerateEventId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an event" />
+                </SelectTrigger>
+                <SelectContent>
                   {events.map((event) => (
-                    <option key={event.id} value={event.id}>
+                    <SelectItem key={event.id} value={event.id}>
                       {event.name}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
+                </SelectContent>
+              </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -850,19 +855,18 @@ const AdminPanel = () => {
               <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
                 Select Event *
               </label>
-                <select
-                  value={selectedEventId}
-                  onChange={(e) => setSelectedEventId(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                  required
-                >
-                  <option value="">Select an event</option>
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an event" />
+                </SelectTrigger>
+                <SelectContent>
                   {events.map((event) => (
-                    <option key={event.id} value={event.id}>
+                    <SelectItem key={event.id} value={event.id}>
                       {event.name}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
+                </SelectContent>
+              </Select>
               </div>
               <div>
                 <label className="block text-[#C9D6DF] text-sm font-medium mb-2">
@@ -1084,19 +1088,18 @@ const AdminPanel = () => {
                  <label className="block text-[#C9D6DF] text-sm font-medium">
                    Select Event *
                  </label>
-                 <select
-                   value={couponEventId}
-                   onChange={(e) => setCouponEventId(e.target.value)}
-                   className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                   required={!editingCoupon}
-                 >
-                   <option value="">Select an event</option>
-                   {events.map((event) => (
-                     <option key={event.id} value={event.id}>
-                       {event.name}
-                     </option>
-                   ))}
-                 </select>
+                 <Select value={couponEventId} onValueChange={setCouponEventId}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Select an event" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {events.map((event) => (
+                       <SelectItem key={event.id} value={event.id}>
+                         {event.name}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
                </div>
              )}
 
@@ -1106,18 +1109,19 @@ const AdminPanel = () => {
                  <label className="block text-[#C9D6DF] text-sm font-medium">
                    Use Template (Optional)
                  </label>
-                 <select
-                   value={selectedTemplateId}
-                   onChange={(e) => setSelectedTemplateId(e.target.value)}
-                   className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                 >
-                   <option value="">Create custom coupon</option>
-                   {couponTemplates.map((template) => (
-                     <option key={template.id} value={template.id}>
-                       {template.title} ({template._count.coupons} used)
-                     </option>
-                   ))}
-                 </select>
+                 <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Create custom coupon" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="">Create custom coupon</SelectItem>
+                     {couponTemplates.map((template) => (
+                       <SelectItem key={template.id} value={template.id}>
+                         {template.title} ({template._count.coupons} used)
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
                  <p className="text-xs text-[#C9D6DF]/60">
                    Select a template to pre-fill the form, or leave blank to create a custom coupon.
                  </p>
@@ -1446,7 +1450,6 @@ const AdminPanel = () => {
                     onClick={() => setWizardData(prev => ({
                       ...prev,
                       coupons: [...prev.coupons, {
-                        templateId: undefined,
                         title: '',
                         description: '',
                         discount: '',
@@ -1483,48 +1486,6 @@ const AdminPanel = () => {
                           </button>
                         </div>
                         <div className="space-y-4">
-                          <select
-                            value={coupon.templateId || ''}
-                            onChange={(e) => {
-                              const templateId = e.target.value;
-                              if (templateId) {
-                                const template = couponTemplates.find(t => t.id === templateId);
-                                if (template) {
-                                  setWizardData(prev => ({
-                                    ...prev,
-                                    coupons: prev.coupons.map((c, i) =>
-                                      i === index ? {
-                                        ...c,
-                                        templateId,
-                                        title: template.title,
-                                        description: template.description || '',
-                                        discount: template.discount?.toString() || '',
-                                        image_url: template.image_url || '',
-                                        valid_from: template.valid_from ? new Date(template.valid_from).toISOString().split('T')[0] : '',
-                                        valid_until: template.valid_until ? new Date(template.valid_until).toISOString().split('T')[0] : '',
-                                        terms: template.terms || ''
-                                      } : c
-                                    )
-                                  }));
-                                }
-                              } else {
-                                setWizardData(prev => ({
-                                  ...prev,
-                                  coupons: prev.coupons.map((c, i) =>
-                                    i === index ? { ...c, templateId: undefined } : c
-                                  )
-                                }));
-                              }
-                            }}
-                            className="w-full px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50"
-                          >
-                            <option value="">Custom coupon</option>
-                            {couponTemplates.map((template) => (
-                              <option key={template.id} value={template.id}>
-                                {template.title}
-                              </option>
-                            ))}
-                          </select>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input
                               type="text"
@@ -1625,6 +1586,60 @@ const AdminPanel = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Events List */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-[#F0F5F9]">Events</h2>
+          {events.length === 0 ? (
+            <div className="text-center py-20 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
+              <p className="text-[#C9D6DF]/60">No events yet. Create your first event!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {events.map((event) => (
+                <div
+                  key={event.id}
+                  className="p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-[#F0F5F9] mb-2">
+                        {event.name}
+                      </h3>
+                      {event.description && (
+                        <p className="text-[#C9D6DF]/60 text-sm mb-2">{event.description}</p>
+                      )}
+                      <div className="flex gap-4 text-sm text-[#C9D6DF]/60">
+                        <span>{event.tickets.length} Tickets</span>
+                        <span>{event.coupons.length} Coupons</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => viewCoupons(event.id)}
+                        className="px-4 py-2 bg-[#52616B] text-[#F0F5F9] rounded-lg text-sm font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
+                      >
+                        View Coupons
+                      </button>
+                      <button
+                        onClick={() => openEditEvent(event)}
+                        className="px-4 py-2 bg-[#C9D6DF] text-[#111111] rounded-lg text-sm font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(event.id)}
+                        className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition-all duration-200"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Coupon Templates List */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -1685,59 +1700,6 @@ const AdminPanel = () => {
           )}
         </div>
 
-        {/* Events List */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#F0F5F9]">Events</h2>
-          {events.length === 0 ? (
-            <div className="text-center py-20 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
-              <p className="text-[#C9D6DF]/60">No events yet. Create your first event!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-[#F0F5F9] mb-2">
-                        {event.name}
-                      </h3>
-                      {event.description && (
-                        <p className="text-[#C9D6DF]/60 text-sm mb-2">{event.description}</p>
-                      )}
-                      <div className="flex gap-4 text-sm text-[#C9D6DF]/60">
-                        <span>{event.tickets.length} Tickets</span>
-                        <span>{event.coupons.length} Coupons</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => viewCoupons(event.id)}
-                        className="px-4 py-2 bg-[#52616B] text-[#F0F5F9] rounded-lg text-sm font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
-                      >
-                        View Coupons
-                      </button>
-                      <button
-                        onClick={() => openEditEvent(event)}
-                        className="px-4 py-2 bg-[#C9D6DF] text-[#111111] rounded-lg text-sm font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteEvent(event.id)}
-                        className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-semibold hover:bg-red-500/30 transition-all duration-200"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Coupons Dialog */}
         <Dialog open={couponsDialogOpen} onOpenChange={(open) => {
