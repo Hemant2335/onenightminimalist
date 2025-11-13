@@ -170,11 +170,13 @@ export const adminAPI = {
     image_url?: string,
     valid_from?: string,
     valid_until?: string,
-    terms?: string
+    terms?: string,
+    templateId?: string
   ) =>
     apiRequest(`/admin/events/${eventId}/coupons`, {
       method: "POST",
       body: JSON.stringify({
+        templateId,
         title,
         description,
         discount,
@@ -215,6 +217,61 @@ export const adminAPI = {
 
   deleteCoupon: (couponId: string) =>
     apiRequest(`/admin/coupons/${couponId}`, {
+      method: "DELETE",
+    }),
+
+  createCouponTemplate: (
+    title: string,
+    description?: string,
+    discount?: number,
+    image_url?: string,
+    valid_from?: string,
+    valid_until?: string,
+    terms?: string
+  ) =>
+    apiRequest("/admin/coupon-templates", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        description,
+        discount,
+        image_url,
+        valid_from,
+        valid_until,
+        terms,
+      }),
+    }),
+
+  getAllCouponTemplates: () =>
+    apiRequest("/admin/coupon-templates", {
+      method: "GET",
+    }),
+
+  updateCouponTemplate: (
+    templateId: string,
+    title: string,
+    description?: string,
+    discount?: number,
+    image_url?: string,
+    valid_from?: string,
+    valid_until?: string,
+    terms?: string
+  ) =>
+    apiRequest(`/admin/coupon-templates/${templateId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        title,
+        description,
+        discount,
+        image_url,
+        valid_from,
+        valid_until,
+        terms,
+      }),
+    }),
+
+  deleteCouponTemplate: (templateId: string) =>
+    apiRequest(`/admin/coupon-templates/${templateId}`, {
       method: "DELETE",
     }),
 };

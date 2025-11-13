@@ -35,6 +35,21 @@ interface Coupon {
   created_at: string;
 }
 
+interface CouponTemplate {
+  id: string;
+  title: string;
+  description?: string;
+  discount?: number;
+  image_url?: string;
+  valid_from?: string;
+  valid_until?: string;
+  terms?: string;
+  created_at: string;
+  _count: {
+    coupons: number;
+  };
+}
+
 interface WizardData {
   event: {
     name: string;
@@ -51,6 +66,7 @@ interface WizardData {
     };
   };
   coupons: Array<{
+    templateId?: string;
     title: string;
     description: string;
     discount: string;
@@ -89,10 +105,10 @@ const AdminPanel = () => {
   
   // Coupon form state
   const [showCouponForm, setShowCouponForm] = useState(false);
-  const [couponForm, setCouponForm] = useState({ 
-    title: '', 
-    description: '', 
-    discount: '', 
+  const [couponForm, setCouponForm] = useState({
+    title: '',
+    description: '',
+    discount: '',
     image_url: '',
     valid_from: '',
     valid_until: '',
@@ -103,6 +119,21 @@ const AdminPanel = () => {
   const [viewingCoupons, setViewingCoupons] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsDialogOpen, setCouponsDialogOpen] = useState(false);
+
+  // Coupon template state
+  const [couponTemplates, setCouponTemplates] = useState<CouponTemplate[]>([]);
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [templateForm, setTemplateForm] = useState({
+    title: '',
+    description: '',
+    discount: '',
+    image_url: '',
+    valid_from: '',
+    valid_until: '',
+    terms: ''
+  });
+  const [editingTemplate, setEditingTemplate] = useState<CouponTemplate | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   // Wizard state
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -127,6 +158,7 @@ const AdminPanel = () => {
 
     if (isAdmin) {
       fetchEvents();
+      fetchCouponTemplates();
     }
   }, [user, isAdmin, authLoading, router]);
 
@@ -266,7 +298,7 @@ const AdminPanel = () => {
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponEventId) return;
-    
+
     try {
       setError('');
       setSuccess('');
@@ -278,12 +310,14 @@ const AdminPanel = () => {
         couponForm.image_url || undefined,
         couponForm.valid_from || undefined,
         couponForm.valid_until || undefined,
-        couponForm.terms || undefined
+        couponForm.terms || undefined,
+        selectedTemplateId || undefined
       );
       if (response.success) {
         setSuccess('Coupon template created successfully! Codes will be generated when users book tickets.');
         setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
         setCouponEventId('');
+        setSelectedTemplateId('');
         setShowCouponForm(false);
         fetchEvents();
         if (viewingCoupons === couponEventId) {
@@ -328,7 +362,7 @@ const AdminPanel = () => {
 
   const handleDeleteCoupon = async (couponId: string) => {
     if (!confirm('Are you sure you want to delete this coupon?')) return;
-    
+
     try {
       setError('');
       setSuccess('');
@@ -344,12 +378,92 @@ const AdminPanel = () => {
     }
   };
 
+  const handleCreateCouponTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setError('');
+      setSuccess('');
+      const response = await adminAPI.createCouponTemplate(
+        templateForm.title,
+        templateForm.description || undefined,
+        templateForm.discount ? parseFloat(templateForm.discount) : undefined,
+        templateForm.image_url || undefined,
+        templateForm.valid_from || undefined,
+        templateForm.valid_until || undefined,
+        templateForm.terms || undefined
+      );
+      if (response.success) {
+        setSuccess('Coupon template created successfully!');
+        setTemplateForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+        setShowTemplateForm(false);
+        fetchCouponTemplates();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create coupon template');
+    }
+  };
+
+  const handleUpdateCouponTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+
+    try {
+      setError('');
+      setSuccess('');
+      const response = await adminAPI.updateCouponTemplate(
+        editingTemplate.id,
+        templateForm.title,
+        templateForm.description || undefined,
+        templateForm.discount ? parseFloat(templateForm.discount) : undefined,
+        templateForm.image_url || undefined,
+        templateForm.valid_from || undefined,
+        templateForm.valid_until || undefined,
+        templateForm.terms || undefined
+      );
+      if (response.success) {
+        setSuccess('Coupon template updated successfully!');
+        setTemplateForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+        setEditingTemplate(null);
+        setShowTemplateForm(false);
+        fetchCouponTemplates();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to update coupon template');
+    }
+  };
+
+  const handleDeleteCouponTemplate = async (templateId: string) => {
+    if (!confirm('Are you sure you want to delete this coupon template?')) return;
+
+    try {
+      setError('');
+      setSuccess('');
+      const response = await adminAPI.deleteCouponTemplate(templateId);
+      if (response.success) {
+        setSuccess('Coupon template deleted successfully!');
+        fetchCouponTemplates();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete coupon template');
+    }
+  };
+
   const fetchCoupons = async (eventId: string) => {
     try {
       const response = await adminAPI.getEventCoupons(eventId);
       setCoupons(response.coupons || []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch coupons');
+    }
+  };
+
+  const fetchCouponTemplates = async () => {
+    try {
+      const response = await adminAPI.getAllCouponTemplates();
+      setCouponTemplates(response.couponTemplates || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch coupon templates');
     }
   };
 
@@ -372,6 +486,20 @@ const AdminPanel = () => {
     });
     setCouponEventId(viewingCoupons || '');
     setShowCouponForm(true);
+  };
+
+  const openEditTemplate = (template: CouponTemplate) => {
+    setEditingTemplate(template);
+    setTemplateForm({
+      title: template.title,
+      description: template.description || '',
+      discount: template.discount?.toString() || '',
+      image_url: template.image_url || '',
+      valid_from: template.valid_from ? new Date(template.valid_from).toISOString().split('T')[0] : '',
+      valid_until: template.valid_until ? new Date(template.valid_until).toISOString().split('T')[0] : '',
+      terms: template.terms || '',
+    });
+    setShowTemplateForm(true);
   };
 
   const viewCoupons = (eventId: string) => {
@@ -421,7 +549,8 @@ const AdminPanel = () => {
           coupon.image_url || undefined,
           coupon.valid_from || undefined,
           coupon.valid_until || undefined,
-          coupon.terms || undefined
+          coupon.terms || undefined,
+          coupon.templateId || undefined
         );
       }
 
@@ -525,10 +654,21 @@ const AdminPanel = () => {
               setEditingCoupon(null);
               setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
               setCouponEventId('');
+              setSelectedTemplateId('');
             }}
             className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
           >
             + Create Coupon
+          </button>
+          <button
+            onClick={() => {
+              setShowTemplateForm(true);
+              setEditingTemplate(null);
+              setTemplateForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+            }}
+            className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
+          >
+            🎨 Manage Templates
           </button>
         </div>
 
@@ -760,6 +900,166 @@ const AdminPanel = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Coupon Template Form Dialog */}
+        <Dialog open={showTemplateForm} onOpenChange={(open) => {
+          if (!open) {
+            setShowTemplateForm(false);
+            setEditingTemplate(null);
+            setTemplateForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+          }
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingTemplate ? 'Edit Coupon Template' : 'Create Coupon Template'}</DialogTitle>
+              <DialogDescription>
+                {editingTemplate ? 'Update the coupon template details below.' : 'Create a reusable coupon template that can be used across multiple events.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={editingTemplate ? handleUpdateCouponTemplate : handleCreateCouponTemplate} className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Basic Information</h3>
+
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Template Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={templateForm.title}
+                    onChange={(e) => setTemplateForm({ ...templateForm, title: e.target.value })}
+                    placeholder="e.g., Early Bird Discount"
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Description
+                  </label>
+                  <textarea
+                    value={templateForm.description}
+                    onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })}
+                    placeholder="Brief description of the coupon offer"
+                    rows={2}
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Discount & Image */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Discount Details</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-[#C9D6DF] text-sm font-medium">
+                      Discount (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={templateForm.discount}
+                      onChange={(e) => setTemplateForm({ ...templateForm, discount: e.target.value })}
+                      placeholder="20"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[#C9D6DF] text-sm font-medium">
+                      Image URL
+                    </label>
+                    <input
+                      type="url"
+                      value={templateForm.image_url}
+                      onChange={(e) => setTemplateForm({ ...templateForm, image_url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#C9D6DF]/60 bg-[#52616B]/10 p-3 rounded-lg">
+                  💡 Templates can be reused across multiple events. Upload images to Firebase Storage and paste the URL here.
+                </p>
+              </div>
+
+              {/* Validity Period */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Validity Period</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-[#C9D6DF] text-sm font-medium">
+                      Valid From
+                    </label>
+                    <input
+                      type="date"
+                      value={templateForm.valid_from}
+                      onChange={(e) => setTemplateForm({ ...templateForm, valid_from: e.target.value })}
+                      className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[#C9D6DF] text-sm font-medium">
+                      Valid Until
+                    </label>
+                    <input
+                      type="date"
+                      value={templateForm.valid_until}
+                      onChange={(e) => setTemplateForm({ ...templateForm, valid_until: e.target.value })}
+                      className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms & Conditions */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#F0F5F9] border-b border-[#C9D6DF]/20 pb-2">Terms & Conditions</h3>
+
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Terms & Conditions
+                  </label>
+                  <textarea
+                    value={templateForm.terms}
+                    onChange={(e) => setTemplateForm({ ...templateForm, terms: e.target.value })}
+                    placeholder="Specify any terms and conditions for using this coupon"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-[#C9D6DF]/20">
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+                >
+                  {editingTemplate ? 'Update Template' : 'Create Template'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTemplateForm(false);
+                    setEditingTemplate(null);
+                    setTemplateForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+                  }}
+                  className="px-6 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         {/* Coupon Form Dialog */}
         <Dialog open={showCouponForm} onOpenChange={(open) => {
           if (!open) {
@@ -767,6 +1067,7 @@ const AdminPanel = () => {
             setEditingCoupon(null);
             setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
             setCouponEventId('');
+            setSelectedTemplateId('');
           }
         }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -777,27 +1078,51 @@ const AdminPanel = () => {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="space-y-6">
-            {/* Event Selection */}
-            {!editingCoupon && (
-              <div className="space-y-2">
-                <label className="block text-[#C9D6DF] text-sm font-medium">
-                  Select Event *
-                </label>
-                <select
-                  value={couponEventId}
-                  onChange={(e) => setCouponEventId(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
-                  required={!editingCoupon}
-                >
-                  <option value="">Select an event</option>
-                  {events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+             {/* Event Selection */}
+             {!editingCoupon && (
+               <div className="space-y-2">
+                 <label className="block text-[#C9D6DF] text-sm font-medium">
+                   Select Event *
+                 </label>
+                 <select
+                   value={couponEventId}
+                   onChange={(e) => setCouponEventId(e.target.value)}
+                   className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                   required={!editingCoupon}
+                 >
+                   <option value="">Select an event</option>
+                   {events.map((event) => (
+                     <option key={event.id} value={event.id}>
+                       {event.name}
+                     </option>
+                   ))}
+                 </select>
+               </div>
+             )}
+
+             {/* Template Selection */}
+             {!editingCoupon && (
+               <div className="space-y-2">
+                 <label className="block text-[#C9D6DF] text-sm font-medium">
+                   Use Template (Optional)
+                 </label>
+                 <select
+                   value={selectedTemplateId}
+                   onChange={(e) => setSelectedTemplateId(e.target.value)}
+                   className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                 >
+                   <option value="">Create custom coupon</option>
+                   {couponTemplates.map((template) => (
+                     <option key={template.id} value={template.id}>
+                       {template.title} ({template._count.coupons} used)
+                     </option>
+                   ))}
+                 </select>
+                 <p className="text-xs text-[#C9D6DF]/60">
+                   Select a template to pre-fill the form, or leave blank to create a custom coupon.
+                 </p>
+               </div>
+             )}
 
             {/* Basic Information */}
             <div className="space-y-4">
@@ -1121,6 +1446,7 @@ const AdminPanel = () => {
                     onClick={() => setWizardData(prev => ({
                       ...prev,
                       coupons: [...prev.coupons, {
+                        templateId: undefined,
                         title: '',
                         description: '',
                         discount: '',
@@ -1156,31 +1482,75 @@ const AdminPanel = () => {
                             Remove
                           </button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input
-                            type="text"
-                            placeholder="Coupon Title"
-                            value={coupon.title}
-                            onChange={(e) => setWizardData(prev => ({
-                              ...prev,
-                              coupons: prev.coupons.map((c, i) =>
-                                i === index ? { ...c, title: e.target.value } : c
-                              )
-                            }))}
-                            className="px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Discount %"
-                            value={coupon.discount}
-                            onChange={(e) => setWizardData(prev => ({
-                              ...prev,
-                              coupons: prev.coupons.map((c, i) =>
-                                i === index ? { ...c, discount: e.target.value } : c
-                              )
-                            }))}
-                            className="px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50"
-                          />
+                        <div className="space-y-4">
+                          <select
+                            value={coupon.templateId || ''}
+                            onChange={(e) => {
+                              const templateId = e.target.value;
+                              if (templateId) {
+                                const template = couponTemplates.find(t => t.id === templateId);
+                                if (template) {
+                                  setWizardData(prev => ({
+                                    ...prev,
+                                    coupons: prev.coupons.map((c, i) =>
+                                      i === index ? {
+                                        ...c,
+                                        templateId,
+                                        title: template.title,
+                                        description: template.description || '',
+                                        discount: template.discount?.toString() || '',
+                                        image_url: template.image_url || '',
+                                        valid_from: template.valid_from ? new Date(template.valid_from).toISOString().split('T')[0] : '',
+                                        valid_until: template.valid_until ? new Date(template.valid_until).toISOString().split('T')[0] : '',
+                                        terms: template.terms || ''
+                                      } : c
+                                    )
+                                  }));
+                                }
+                              } else {
+                                setWizardData(prev => ({
+                                  ...prev,
+                                  coupons: prev.coupons.map((c, i) =>
+                                    i === index ? { ...c, templateId: undefined } : c
+                                  )
+                                }));
+                              }
+                            }}
+                            className="w-full px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] focus:outline-none focus:border-[#C9D6DF]/50"
+                          >
+                            <option value="">Custom coupon</option>
+                            {couponTemplates.map((template) => (
+                              <option key={template.id} value={template.id}>
+                                {template.title}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input
+                              type="text"
+                              placeholder="Coupon Title"
+                              value={coupon.title}
+                              onChange={(e) => setWizardData(prev => ({
+                                ...prev,
+                                coupons: prev.coupons.map((c, i) =>
+                                  i === index ? { ...c, title: e.target.value } : c
+                                )
+                              }))}
+                              className="px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Discount %"
+                              value={coupon.discount}
+                              onChange={(e) => setWizardData(prev => ({
+                                ...prev,
+                                coupons: prev.coupons.map((c, i) =>
+                                  i === index ? { ...c, discount: e.target.value } : c
+                                )
+                              }))}
+                              className="px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1254,6 +1624,66 @@ const AdminPanel = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Coupon Templates List */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-[#F0F5F9]">Coupon Templates</h2>
+            <button
+              onClick={() => {
+                setShowTemplateForm(true);
+                setEditingTemplate(null);
+                setTemplateForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
+              }}
+              className="px-4 py-2 bg-[#C9D6DF] text-[#111111] rounded-lg text-sm font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+            >
+              + New Template
+            </button>
+          </div>
+          {couponTemplates.length === 0 ? (
+            <div className="text-center py-20 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
+              <p className="text-[#C9D6DF]/60">No coupon templates yet. Create your first template!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {couponTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  className="p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2">
+                        {template.title}
+                      </h3>
+                      {template.description && (
+                        <p className="text-[#C9D6DF]/60 text-sm mb-2">{template.description}</p>
+                      )}
+                      <div className="flex gap-4 text-sm text-[#C9D6DF]/60">
+                        <span>{template.discount}% off</span>
+                        <span>{template._count.coupons} used</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEditTemplate(template)}
+                      className="px-3 py-1.5 bg-[#C9D6DF] text-[#111111] rounded text-xs font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCouponTemplate(template.id)}
+                      className="px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs font-semibold hover:bg-red-500/30 transition-all duration-200"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Events List */}
         <div className="space-y-6">
