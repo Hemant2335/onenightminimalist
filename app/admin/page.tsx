@@ -76,6 +76,7 @@ const AdminPanel = () => {
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [viewingCoupons, setViewingCoupons] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponsDialogOpen, setCouponsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -340,6 +341,7 @@ const AdminPanel = () => {
   const viewCoupons = (eventId: string) => {
     setViewingCoupons(eventId);
     fetchCoupons(eventId);
+    setCouponsDialogOpen(true);
   };
 
   if (authLoading || loading) {
@@ -892,24 +894,33 @@ const AdminPanel = () => {
           )}
         </div>
 
-        {/* Coupons View */}
-        {viewingCoupons && (
-          <div className="mt-12 p-6 bg-[#1E2022] border border-[#C9D6DF]/20 rounded-lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-[#F0F5F9]">
-                Coupons for {events.find(e => e.id === viewingCoupons)?.name}
-              </h2>
-              <button
-                onClick={() => setViewingCoupons(null)}
-                className="px-4 py-2 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg text-sm font-semibold hover:bg-[#52616B]/20 transition-all duration-200"
-              >
-                Close
-              </button>
-            </div>
+        {/* Coupons Dialog */}
+        <Dialog open={couponsDialogOpen} onOpenChange={(open) => {
+          setCouponsDialogOpen(open);
+          if (!open) {
+            setViewingCoupons(null);
+            setCoupons([]);
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Coupons for {events.find(e => e.id === viewingCoupons)?.name}</DialogTitle>
+              <DialogDescription>
+                Manage coupon templates for this event
+              </DialogDescription>
+            </DialogHeader>
             {coupons.length === 0 ? (
-              <p className="text-[#C9D6DF]/60 text-center py-8">No coupons for this event yet.</p>
+              <div className="text-center py-10">
+                <div className="text-4xl mb-4">🎁</div>
+                <p className="text-lg text-[#C9D6DF]/60 mb-2">
+                  No coupons for this event yet
+                </p>
+                <p className="text-[#C9D6DF]/40 text-sm">
+                  Create coupon templates that will generate unique codes when users book tickets
+                </p>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {coupons.map((coupon) => (
                   <div
                     key={coupon.id}
@@ -925,7 +936,10 @@ const AdminPanel = () => {
                     )}
                     <div className="flex gap-2 mt-4">
                       <button
-                        onClick={() => openEditCoupon(coupon)}
+                        onClick={() => {
+                          openEditCoupon(coupon);
+                          setCouponsDialogOpen(false);
+                        }}
                         className="px-3 py-1.5 bg-[#C9D6DF] text-[#111111] rounded text-xs font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
                       >
                         Edit
@@ -941,8 +955,8 @@ const AdminPanel = () => {
                 ))}
               </div>
             )}
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

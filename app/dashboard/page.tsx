@@ -6,13 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { eventsAPI } from '@/lib/api';
 import CouponCard from '@/components/CouponCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 
 interface Coupon {
   id: string;
@@ -62,7 +55,6 @@ const DashboardPage = () => {
   const [ticketNumber, setTicketNumber] = useState('');
   const [addingTicket, setAddingTicket] = useState(false);
   const [activeTab, setActiveTab] = useState<'tickets' | 'coupons' | 'events'>('events');
-  const [couponsDialogOpen, setCouponsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -74,14 +66,6 @@ const DashboardPage = () => {
       fetchEvents();
     }
   }, [user, authLoading, router]);
-
-  useEffect(() => {
-    if (activeTab === 'coupons') {
-      setCouponsDialogOpen(true);
-    } else {
-      setCouponsDialogOpen(false);
-    }
-  }, [activeTab]);
 
   const fetchEvents = async () => {
     try {
@@ -310,15 +294,37 @@ const DashboardPage = () => {
         )}
 
         {activeTab === 'coupons' && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🎁</div>
-            <p className="text-xl text-[#C9D6DF]/60 mb-4">
-              Opening Coupons
-            </p>
-            <p className="text-[#C9D6DF]/40">
-              Your available coupons will appear in a popup
-            </p>
-          </div>
+          <>
+            {/* Coupons Section */}
+            {events.some(e => e.coupons && e.coupons.length > 0) ? (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold text-[#F0F5F9] mb-6">
+                  Available Coupons
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {events.flatMap((event) =>
+                    event.coupons?.map((coupon) => (
+                      <CouponCard
+                        key={coupon.id}
+                        coupon={coupon}
+                        eventName={event.name}
+                      />
+                    )) || []
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">🎁</div>
+                <p className="text-xl text-[#C9D6DF]/60 mb-4">
+                  No coupons available
+                </p>
+                <p className="text-[#C9D6DF]/40">
+                  Coupons will appear here when available for your events
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === 'events' && (
@@ -380,41 +386,6 @@ const DashboardPage = () => {
             )}
           </>
         )}
-
-        {/* Coupons Dialog */}
-        <Dialog open={couponsDialogOpen} onOpenChange={setCouponsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Available Coupons</DialogTitle>
-              <DialogDescription>
-                Coupons available for your events
-              </DialogDescription>
-            </DialogHeader>
-            {events.some(e => e.coupons && e.coupons.length > 0) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {events.flatMap((event) =>
-                  event.coupons?.map((coupon) => (
-                    <CouponCard
-                      key={coupon.id}
-                      coupon={coupon}
-                      eventName={event.name}
-                    />
-                  )) || []
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <div className="text-4xl mb-4">🎁</div>
-                <p className="text-lg text-[#C9D6DF]/60 mb-2">
-                  No coupons available
-                </p>
-                <p className="text-[#C9D6DF]/40 text-sm">
-                  Coupons will appear here when available for your events
-                </p>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
