@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import ScratchCard from "./ScratchCard";
+import FeedbackDialog from "./FeedbackDialog";
 import { eventsAPI } from "@/lib/api";
 
 interface Coupon {
@@ -29,6 +30,7 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
   const [isScratched, setIsScratched] = useState(coupon.is_redeemed || false);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [isAddingToWallet, setIsAddingToWallet] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [error, setError] = useState("");
 
   const handleReveal = () => {
@@ -38,7 +40,7 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
     }
   };
 
-  const handleRedeem = async () => {
+  const handleRedeemClick = () => {
     if (coupon.is_redeemed) {
       setError("This coupon has already been redeemed");
       return;
@@ -49,10 +51,19 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
       return;
     }
 
+    setShowFeedbackDialog(true);
+  };
+
+  const handleFeedbackSubmit = async (rating: number, comment?: string) => {
     try {
       setIsRedeeming(true);
       setError("");
+      setShowFeedbackDialog(false);
+
+      // Submit feedback and redeem in one call if the API supports it
+      // For now, we'll just redeem since feedback submission might need backend changes
       await eventsAPI.redeemCoupon(coupon.id);
+
       setIsRevealed(true);
       setIsScratched(true);
       // Update coupon status
@@ -257,7 +268,7 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
           {/* Redeem Button */}
           {!coupon.is_redeemed && coupon.code && (
             <button
-              onClick={handleRedeem}
+              onClick={handleRedeemClick}
               // disabled={isRedeeming || !isRevealed}
               className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-green-500/20 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mb-3"
             >
@@ -409,6 +420,15 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
           </div>
         </div>
       </div>
+
+      {/* Feedback Dialog */}
+      <FeedbackDialog
+        isOpen={showFeedbackDialog}
+        onClose={() => setShowFeedbackDialog(false)}
+        onSubmit={handleFeedbackSubmit}
+        eventName={eventName}
+        isSubmitting={isRedeeming}
+      />
     </div>
   );
 };
