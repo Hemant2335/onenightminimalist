@@ -10,13 +10,42 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+interface FeedbackQuestion {
+  id: string;
+  question: string;
+  rating: number;
+}
+
 interface FeedbackDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (rating: number, comment?: string) => void;
+  onSubmit: (ratings: Record<string, number>, comment?: string) => void;
   eventName?: string;
   isSubmitting?: boolean;
 }
+
+const questions = [
+  {
+    id: "overall",
+    question: "How would you rate the overall event experience?",
+  },
+  {
+    id: "organization",
+    question: "How satisfied were you with the event organization?",
+  },
+  {
+    id: "content",
+    question: "How would you rate the event content and quality?",
+  },
+  {
+    id: "recommendation",
+    question: "How likely are you to recommend this event to others?",
+  },
+  {
+    id: "value",
+    question: "How would you rate the value for money?",
+  },
+];
 
 const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
   isOpen,
@@ -25,29 +54,61 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
   eventName,
   isSubmitting = false,
 }) => {
-  const [rating, setRating] = useState(0);
-  const [hoveredRating, setHoveredRating] = useState(0);
+  const [feedback, setFeedback] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
 
+  const handleRatingChange = (questionId: string, rating: number) => {
+    setFeedback(prev => ({
+      ...prev,
+      [questionId]: rating
+    }));
+  };
+
   const handleSubmit = () => {
-    if (rating === 0) return;
-    onSubmit(rating, comment.trim() || undefined);
+    // Check if all questions are answered
+    const allAnswered = questions.every(q => feedback[q.id] !== undefined);
+    if (!allAnswered) return;
+
+    onSubmit(feedback, comment.trim() || undefined);
     // Reset form
-    setRating(0);
+    setFeedback({});
     setComment("");
   };
 
   const handleClose = () => {
-    setRating(0);
-    setHoveredRating(0);
+    setFeedback({});
     setComment("");
     onClose();
   };
 
+  const allQuestionsAnswered = questions.every(q => feedback[q.id] !== undefined);
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+    <>
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #C9D6DF;
+          cursor: pointer;
+          border: 2px solid #1E2022;
+          box-shadow: 0 0 0 2px #52616B;
+        }
+        .slider::-moz-range-thumb {
+          height: 20px;
+          width: 20px;
+          border-radius: 50%;
+          background: #C9D6DF;
+          cursor: pointer;
+          border: 2px solid #1E2022;
+          box-shadow: 0 0 0 2px #52616B;
+        }
+      `}</style>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
           <DialogTitle className="text-[#F0F5F9]">
             How was your experience?
           </DialogTitle>
@@ -59,48 +120,39 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          {/* Star Rating */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="flex space-x-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoveredRating(star)}
-                  onMouseLeave={() => setHoveredRating(0)}
-                  className="focus:outline-none focus:ring-2 focus:ring-[#C9D6DF]/50 rounded"
-                  disabled={isSubmitting}
-                >
-                  <svg
-                    className={`w-8 h-8 ${
-                      star <= (hoveredRating || rating)
-                        ? "text-yellow-400 fill-current"
-                        : "text-[#C9D6DF]/30"
-                    } transition-colors duration-150`}
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                  </svg>
-                </button>
-              ))}
-            </div>
+        <div className="py-4 max-h-96 overflow-y-auto">
+          {/* Questions with Sliders */}
+          <div className="space-y-6">
+            {questions.map((question, index) => (
+              <div key={question.id} className="space-y-3">
+                <label className="block text-sm font-medium text-[#C9D6DF]/90">
+                  {index + 1}. {question.question}
+                </label>
 
-            <p className="text-sm text-[#C9D6DF]/60">
-              {rating === 0
-                ? "Select a rating"
-                : rating === 1
-                ? "Poor"
-                : rating === 2
-                ? "Fair"
-                : rating === 3
-                ? "Good"
-                : rating === 4
-                ? "Very Good"
-                : "Excellent"
-              }
-            </p>
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={feedback[question.id] || 1}
+                    onChange={(e) => handleRatingChange(question.id, parseInt(e.target.value))}
+                    className="w-full h-2 bg-[#52616B]/30 rounded-lg appearance-none cursor-pointer slider"
+                    disabled={isSubmitting}
+                    style={{
+                      background: `linear-gradient(to right, #C9D6DF 0%, #C9D6DF ${(feedback[question.id] || 1) * 10}%, #52616B ${(feedback[question.id] || 1) * 10}%, #52616B 100%)`
+                    }}
+                  />
+
+                  <div className="flex justify-between text-xs text-[#C9D6DF]/60">
+                    <span>1</span>
+                    <span className="font-semibold text-[#C9D6DF]">
+                      {feedback[question.id] || 1}/10
+                    </span>
+                    <span>10</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Optional Comment */}
@@ -109,13 +161,13 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
               htmlFor="comment"
               className="block text-sm font-medium text-[#C9D6DF]/80 mb-2"
             >
-              Comments (optional)
+              Additional Comments (optional)
             </label>
             <textarea
               id="comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Tell us about your experience..."
+              placeholder="Any additional feedback about your experience..."
               className="w-full px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:ring-2 focus:ring-[#C9D6DF]/50 focus:border-transparent resize-none"
               rows={3}
               disabled={isSubmitting}
@@ -135,7 +187,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={rating === 0 || isSubmitting}
+            disabled={!allQuestionsAnswered || isSubmitting}
             className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-green-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSubmitting ? (
@@ -165,6 +217,7 @@ const FeedbackDialog: React.FC<FeedbackDialogProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 

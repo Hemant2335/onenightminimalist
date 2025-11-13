@@ -54,7 +54,7 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
     setShowFeedbackDialog(true);
   };
 
-  const handleFeedbackSubmit = async (rating: number, comment?: string) => {
+  const handleFeedbackSubmit = async (ratings: Record<string, number>, comment?: string) => {
     try {
       setIsRedeeming(true);
       setError("");
@@ -62,6 +62,9 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, eventName }) => {
 
       // Submit feedback and redeem in one call if the API supports it
       // For now, we'll just redeem since feedback submission might need backend changes
+      // TODO: Add feedback submission to backend API
+      console.log("Feedback submitted:", { ratings, comment });
+
       await eventsAPI.redeemCoupon(coupon.id);
 
       setIsRevealed(true);
