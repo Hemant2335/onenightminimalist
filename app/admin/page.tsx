@@ -35,6 +35,32 @@ interface Coupon {
   created_at: string;
 }
 
+interface WizardData {
+  event: {
+    name: string;
+    description: string;
+  };
+  tickets: {
+    method: 'auto' | 'manual';
+    auto: {
+      count: string;
+      prefix: string;
+    };
+    manual: {
+      numbers: string;
+    };
+  };
+  coupons: Array<{
+    title: string;
+    description: string;
+    discount: string;
+    image_url: string;
+    valid_from: string;
+    valid_until: string;
+    terms: string;
+  }>;
+}
+
 const AdminPanel = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -77,6 +103,16 @@ const AdminPanel = () => {
   const [viewingCoupons, setViewingCoupons] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsDialogOpen, setCouponsDialogOpen] = useState(false);
+
+  // Wizard state
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardData, setWizardData] = useState<WizardData>({
+    event: { name: '', description: '' },
+    tickets: { method: 'auto', auto: { count: '', prefix: 'TICKET' }, manual: { numbers: '' } },
+    coupons: []
+  });
+  const [creatingWizard, setCreatingWizard] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -344,6 +380,61 @@ const AdminPanel = () => {
     setCouponsDialogOpen(true);
   };
 
+  const handleWizardSubmit = async () => {
+    try {
+      setCreatingWizard(true);
+      setError('');
+      setSuccess('');
+
+      // Step 1: Create Event
+      const eventResponse = await adminAPI.createEvent(
+        wizardData.event.name,
+        wizardData.event.description || undefined
+      );
+      if (!eventResponse.success) throw new Error('Failed to create event');
+
+      const eventId = eventResponse.event.id;
+
+      // Step 2: Add Tickets
+      if (wizardData.tickets.method === 'auto') {
+        const count = parseInt(wizardData.tickets.auto.count);
+        if (count > 0) {
+          await adminAPI.autoGenerateTickets(eventId, count, wizardData.tickets.auto.prefix || undefined);
+        }
+      } else {
+        const ticketNumbers = wizardData.tickets.manual.numbers
+          .split('\n')
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+        if (ticketNumbers.length > 0) {
+          await adminAPI.addTicketsToEvent(eventId, ticketNumbers);
+        }
+      }
+
+      // Step 3: Create Coupons
+      for (const coupon of wizardData.coupons) {
+        await adminAPI.createCoupon(
+          eventId,
+          coupon.title,
+          coupon.description || undefined,
+          coupon.discount ? parseFloat(coupon.discount) : undefined,
+          coupon.image_url || undefined,
+          coupon.valid_from || undefined,
+          coupon.valid_until || undefined,
+          coupon.terms || undefined
+        );
+      }
+
+      setSuccess('Event created successfully with tickets and coupons!');
+      setWizardOpen(false);
+      fetchEvents();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create event');
+    } finally {
+      setCreatingWizard(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-[#111111] flex items-center justify-center">
@@ -385,11 +476,25 @@ const AdminPanel = () => {
         <div className="mb-8 flex flex-wrap gap-4">
           <button
             onClick={() => {
+              setWizardOpen(true);
+              setWizardStep(1);
+              setWizardData({
+                event: { name: '', description: '' },
+                tickets: { method: 'auto', auto: { count: '', prefix: 'TICKET' }, manual: { numbers: '' } },
+                coupons: []
+              });
+            }}
+            className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+          >
+            🚀 Create Event Wizard
+          </button>
+          <button
+            onClick={() => {
               setShowEventForm(true);
               setEditingEvent(null);
               setEventForm({ name: '', description: '' });
             }}
-            className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+            className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
           >
             + Create Event
           </button>
@@ -837,6 +942,316 @@ const AdminPanel = () => {
               </button>
             </div>
           </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Event Creation Wizard */}
+        <Dialog open={wizardOpen} onOpenChange={(open) => {
+          if (!open) {
+            setWizardOpen(false);
+            setWizardStep(1);
+            setWizardData({
+              event: { name: '', description: '' },
+              tickets: { method: 'auto', auto: { count: '', prefix: 'TICKET' }, manual: { numbers: '' } },
+              coupons: []
+            });
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Event Wizard</DialogTitle>
+              <DialogDescription>
+                Step {wizardStep} of 4: {
+                  wizardStep === 1 ? 'Event Details' :
+                  wizardStep === 2 ? 'Ticket Setup' :
+                  wizardStep === 3 ? 'Coupon Setup' :
+                  'Review & Create'
+                }
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Step 1: Event Details */}
+            {wizardStep === 1 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Event Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={wizardData.event.name}
+                    onChange={(e) => setWizardData(prev => ({
+                      ...prev,
+                      event: { ...prev.event, name: e.target.value }
+                    }))}
+                    placeholder="Enter event name"
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Description
+                  </label>
+                  <textarea
+                    value={wizardData.event.description}
+                    onChange={(e) => setWizardData(prev => ({
+                      ...prev,
+                      event: { ...prev.event, description: e.target.value }
+                    }))}
+                    placeholder="Enter event description"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all resize-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Tickets */}
+            {wizardStep === 2 && (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <label className="block text-[#C9D6DF] text-sm font-medium">
+                    Ticket Generation Method
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="ticketMethod"
+                        value="auto"
+                        checked={wizardData.tickets.method === 'auto'}
+                        onChange={(e) => setWizardData(prev => ({
+                          ...prev,
+                          tickets: { ...prev.tickets, method: e.target.value as 'auto' }
+                        }))}
+                        className="text-[#C9D6DF] focus:ring-[#C9D6DF]/20"
+                      />
+                      <span className="text-[#C9D6DF]">Auto-Generate</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="ticketMethod"
+                        value="manual"
+                        checked={wizardData.tickets.method === 'manual'}
+                        onChange={(e) => setWizardData(prev => ({
+                          ...prev,
+                          tickets: { ...prev.tickets, method: e.target.value as 'manual' }
+                        }))}
+                        className="text-[#C9D6DF] focus:ring-[#C9D6DF]/20"
+                      />
+                      <span className="text-[#C9D6DF]">Manual Entry</span>
+                    </label>
+                  </div>
+                </div>
+
+                {wizardData.tickets.method === 'auto' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-[#C9D6DF] text-sm font-medium">
+                        Number of Tickets
+                      </label>
+                      <input
+                        type="number"
+                        value={wizardData.tickets.auto.count}
+                        onChange={(e) => setWizardData(prev => ({
+                          ...prev,
+                          tickets: {
+                            ...prev.tickets,
+                            auto: { ...prev.tickets.auto, count: e.target.value }
+                          }
+                        }))}
+                        placeholder="100"
+                        min="1"
+                        max="1000"
+                        className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-[#C9D6DF] text-sm font-medium">
+                        Prefix
+                      </label>
+                      <input
+                        type="text"
+                        value={wizardData.tickets.auto.prefix}
+                        onChange={(e) => setWizardData(prev => ({
+                          ...prev,
+                          tickets: {
+                            ...prev.tickets,
+                            auto: { ...prev.tickets.auto, prefix: e.target.value }
+                          }
+                        }))}
+                        placeholder="TICKET"
+                        className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {wizardData.tickets.method === 'manual' && (
+                  <div className="space-y-2">
+                    <label className="block text-[#C9D6DF] text-sm font-medium">
+                      Ticket Numbers (one per line)
+                    </label>
+                    <textarea
+                      value={wizardData.tickets.manual.numbers}
+                      onChange={(e) => setWizardData(prev => ({
+                        ...prev,
+                        tickets: {
+                          ...prev.tickets,
+                          manual: { numbers: e.target.value }
+                        }
+                      }))}
+                      placeholder="TICKET001&#10;TICKET002&#10;TICKET003"
+                      rows={6}
+                      className="w-full px-4 py-3 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded-lg text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50 focus:ring-1 focus:ring-[#C9D6DF]/20 transition-all font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Coupons */}
+            {wizardStep === 3 && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-[#F0F5F9]">Coupons (Optional)</h3>
+                  <button
+                    onClick={() => setWizardData(prev => ({
+                      ...prev,
+                      coupons: [...prev.coupons, {
+                        title: '',
+                        description: '',
+                        discount: '',
+                        image_url: '',
+                        valid_from: '',
+                        valid_until: '',
+                        terms: ''
+                      }]
+                    }))}
+                    className="px-4 py-2 bg-[#C9D6DF] text-[#111111] rounded-lg text-sm font-semibold hover:bg-[#F0F5F9] transition-all duration-200"
+                  >
+                    + Add Coupon
+                  </button>
+                </div>
+
+                {wizardData.coupons.length === 0 ? (
+                  <div className="text-center py-8 text-[#C9D6DF]/60">
+                    No coupons added yet. Click "Add Coupon" to create coupon templates.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {wizardData.coupons.map((coupon, index) => (
+                      <div key={index} className="p-4 bg-[#52616B]/10 border border-[#C9D6DF]/20 rounded-lg">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-[#F0F5F9] font-semibold">Coupon {index + 1}</h4>
+                          <button
+                            onClick={() => setWizardData(prev => ({
+                              ...prev,
+                              coupons: prev.coupons.filter((_, i) => i !== index)
+                            }))}
+                            className="text-red-400 hover:text-red-300 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <input
+                            type="text"
+                            placeholder="Coupon Title"
+                            value={coupon.title}
+                            onChange={(e) => setWizardData(prev => ({
+                              ...prev,
+                              coupons: prev.coupons.map((c, i) =>
+                                i === index ? { ...c, title: e.target.value } : c
+                              )
+                            }))}
+                            className="px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Discount %"
+                            value={coupon.discount}
+                            onChange={(e) => setWizardData(prev => ({
+                              ...prev,
+                              coupons: prev.coupons.map((c, i) =>
+                                i === index ? { ...c, discount: e.target.value } : c
+                              )
+                            }))}
+                            className="px-3 py-2 bg-[#52616B]/20 border border-[#C9D6DF]/20 rounded text-[#F0F5F9] placeholder-[#C9D6DF]/40 focus:outline-none focus:border-[#C9D6DF]/50"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Review */}
+            {wizardStep === 4 && (
+              <div className="space-y-6">
+                <div className="p-4 bg-[#52616B]/10 border border-[#C9D6DF]/20 rounded-lg">
+                  <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2">Event Details</h3>
+                  <p className="text-[#C9D6DF]"><strong>Name:</strong> {wizardData.event.name}</p>
+                  {wizardData.event.description && (
+                    <p className="text-[#C9D6DF]"><strong>Description:</strong> {wizardData.event.description}</p>
+                  )}
+                </div>
+
+                <div className="p-4 bg-[#52616B]/10 border border-[#C9D6DF]/20 rounded-lg">
+                  <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2">Tickets</h3>
+                  {wizardData.tickets.method === 'auto' ? (
+                    <p className="text-[#C9D6DF]">
+                      Auto-generate {wizardData.tickets.auto.count} tickets with prefix "{wizardData.tickets.auto.prefix}"
+                    </p>
+                  ) : (
+                    <p className="text-[#C9D6DF]">
+                      Manual tickets: {wizardData.tickets.manual.numbers.split('\n').filter(n => n.trim()).length} tickets
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-4 bg-[#52616B]/10 border border-[#C9D6DF]/20 rounded-lg">
+                  <h3 className="text-lg font-semibold text-[#F0F5F9] mb-2">Coupons</h3>
+                  {wizardData.coupons.length === 0 ? (
+                    <p className="text-[#C9D6DF]">No coupons</p>
+                  ) : (
+                    <p className="text-[#C9D6DF]">{wizardData.coupons.length} coupon template(s)</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex justify-between pt-6 border-t border-[#C9D6DF]/20">
+              <button
+                onClick={() => setWizardStep(prev => Math.max(1, prev - 1))}
+                disabled={wizardStep === 1}
+                className="px-6 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                Previous
+              </button>
+
+              {wizardStep < 4 ? (
+                <button
+                  onClick={() => setWizardStep(prev => Math.min(4, prev + 1))}
+                  disabled={wizardStep === 1 && !wizardData.event.name.trim()}
+                  className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={handleWizardSubmit}
+                  disabled={creatingWizard}
+                  className="px-6 py-3 bg-[#C9D6DF] text-[#111111] rounded-lg font-semibold hover:bg-[#F0F5F9] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  {creatingWizard ? 'Creating...' : 'Create Event'}
+                </button>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
