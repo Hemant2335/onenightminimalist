@@ -29,16 +29,11 @@ export const AuthPopup = ({
   const [error, setError] = useState("");
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [recaptchaWidgetId, setRecaptchaWidgetId] = useState<number | null>(null);
 
   // Initialize reCAPTCHA
   useEffect(() => {
-    if (isOpen) {
-      // Clear any existing verifier first
-      if (recaptchaVerifier) {
-        recaptchaVerifier.clear();
-      }
-
-      // Create new verifier
+    if (isOpen && !recaptchaVerifier) {
       const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
         callback: () => {
@@ -49,12 +44,18 @@ export const AuthPopup = ({
         }
       });
       setRecaptchaVerifier(verifier);
+      verifier.render().then((widgetId) => {
+        setRecaptchaWidgetId(widgetId);
+        (window as any).recaptchaWidgetId = widgetId;
+      });
     }
 
     return () => {
       if (recaptchaVerifier) {
         recaptchaVerifier.clear();
       }
+      setRecaptchaWidgetId(null);
+      (window as any).recaptchaWidgetId = undefined;
     };
   }, [isOpen]);
 
@@ -109,14 +110,14 @@ export const AuthPopup = ({
       } else {
         setError("Failed to send OTP. Please try again.");
       }
-      
+
       // Reset reCAPTCHA on error
-      if (recaptchaVerifier) {
-        recaptchaVerifier.clear();
-        const newVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
+      if ((window as any).recaptchaWidgetId) {
+        (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
+      } else if (recaptchaVerifier) {
+        recaptchaVerifier.render().then((widgetId: number) => {
+          (window as any).grecaptcha.reset(widgetId);
         });
-        setRecaptchaVerifier(newVerifier);
       }
     } finally {
       setLoading(false);
@@ -246,6 +247,15 @@ export const AuthPopup = ({
     } catch (err: any) {
       console.error("Resend OTP error:", err);
       setError("Failed to resend OTP. Please try again.");
+
+      // Reset reCAPTCHA on error
+      if ((window as any).recaptchaWidgetId) {
+        (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
+      } else if (recaptchaVerifier) {
+        recaptchaVerifier.render().then((widgetId: number) => {
+          (window as any).grecaptcha.reset(widgetId);
+        });
+      }
     } finally {
       setLoading(false);
     }
