@@ -112,12 +112,21 @@ export const AuthPopup = ({
       }
 
       // Reset reCAPTCHA on error
-      if ((window as any).recaptchaWidgetId) {
+      if ((window as any).grecaptcha && (window as any).recaptchaWidgetId) {
         (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-      } else if (recaptchaVerifier) {
-        recaptchaVerifier.render().then((widgetId: number) => {
-          (window as any).grecaptcha.reset(widgetId);
-        });
+      } else {
+        // Fallback: recreate verifier
+        if (recaptchaVerifier) {
+          recaptchaVerifier.clear();
+          const newVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+          });
+          setRecaptchaVerifier(newVerifier);
+          newVerifier.render().then((widgetId) => {
+            setRecaptchaWidgetId(widgetId);
+            (window as any).recaptchaWidgetId = widgetId;
+          });
+        }
       }
     } finally {
       setLoading(false);
@@ -249,12 +258,21 @@ export const AuthPopup = ({
       setError("Failed to resend OTP. Please try again.");
 
       // Reset reCAPTCHA on error
-      if ((window as any).recaptchaWidgetId) {
+      if ((window as any).grecaptcha && (window as any).recaptchaWidgetId) {
         (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-      } else if (recaptchaVerifier) {
-        recaptchaVerifier.render().then((widgetId: number) => {
-          (window as any).grecaptcha.reset(widgetId);
-        });
+      } else {
+        // Fallback: recreate verifier
+        if (recaptchaVerifier) {
+          recaptchaVerifier.clear();
+          const newVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+          });
+          setRecaptchaVerifier(newVerifier);
+          newVerifier.render().then((widgetId) => {
+            setRecaptchaWidgetId(widgetId);
+            (window as any).recaptchaWidgetId = widgetId;
+          });
+        }
       }
     } finally {
       setLoading(false);
