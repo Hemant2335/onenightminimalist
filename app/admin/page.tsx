@@ -139,7 +139,7 @@ const AdminPanel = () => {
     terms: ''
   });
   const [editingTemplate, setEditingTemplate] = useState<CouponTemplate | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('custom');
 
   // Wizard state
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -317,13 +317,13 @@ const AdminPanel = () => {
         couponForm.valid_from || undefined,
         couponForm.valid_until || undefined,
         couponForm.terms || undefined,
-        selectedTemplateId || undefined
+        selectedTemplateId === 'custom' ? undefined : selectedTemplateId
       );
       if (response.success) {
         setSuccess('Coupon template created successfully! Codes will be generated when users book tickets.');
         setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
         setCouponEventId('');
-        setSelectedTemplateId('');
+        setSelectedTemplateId('custom');
         setShowCouponForm(false);
         fetchEvents();
         if (viewingCoupons === couponEventId) {
@@ -660,7 +660,7 @@ const AdminPanel = () => {
               setEditingCoupon(null);
               setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
               setCouponEventId('');
-              setSelectedTemplateId('');
+              setSelectedTemplateId('custom');
             }}
             className="px-6 py-3 bg-[#52616B] text-[#F0F5F9] rounded-lg font-semibold hover:bg-[#52616B]/80 transition-all duration-200"
           >
@@ -1071,7 +1071,7 @@ const AdminPanel = () => {
             setEditingCoupon(null);
             setCouponForm({ title: '', description: '', discount: '', image_url: '', valid_from: '', valid_until: '', terms: '' });
             setCouponEventId('');
-            setSelectedTemplateId('');
+            setSelectedTemplateId('custom');
           }
         }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1114,7 +1114,7 @@ const AdminPanel = () => {
                      <SelectValue placeholder="Create custom coupon" />
                    </SelectTrigger>
                    <SelectContent>
-                     <SelectItem value="">Create custom coupon</SelectItem>
+                     <SelectItem value="custom">Create custom coupon</SelectItem>
                      {couponTemplates.map((template) => (
                        <SelectItem key={template.id} value={template.id}>
                          {template.title} ({template._count.coupons} used)
