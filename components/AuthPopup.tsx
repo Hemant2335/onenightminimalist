@@ -29,11 +29,15 @@ export const AuthPopup = ({
   const [error, setError] = useState("");
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
-  const [recaptchaWidgetId, setRecaptchaWidgetId] = useState<number | null>(null);
 
-  // Initialize reCAPTCHA
-  useEffect(() => {
-    if (isOpen && !recaptchaVerifier) {
+  // Initialize reCAPTCHA with proper cleanup
+  const initializeRecaptcha = () => {
+    try {
+      // Clear existing verifier if any
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+      }
+
       const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
         callback: () => {
@@ -41,21 +45,40 @@ export const AuthPopup = ({
         },
         'expired-callback': () => {
           setError("reCAPTCHA expired. Please try again.");
+          // Reinitialize on expiry
+          setTimeout(() => initializeRecaptcha(), 100);
         }
       });
+      
       setRecaptchaVerifier(verifier);
-      verifier.render().then((widgetId) => {
-        setRecaptchaWidgetId(widgetId);
-        (window as any).recaptchaWidgetId = widgetId;
-      });
+      return verifier;
+    } catch (err) {
+      console.error("reCAPTCHA initialization error:", err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        initializeRecaptcha();
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+      };
     }
 
     return () => {
       if (recaptchaVerifier) {
-        recaptchaVerifier.clear();
+        try {
+          recaptchaVerifier.clear();
+        } catch (err) {
+          console.error("Error clearing reCAPTCHA:", err);
+        }
+        setRecaptchaVerifier(null);
       }
-      setRecaptchaWidgetId(null);
-      (window as any).recaptchaWidgetId = undefined;
     };
   }, [isOpen]);
 
@@ -68,15 +91,19 @@ export const AuthPopup = ({
       // Format phone number (ensure it starts with country code)
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
 
-      if (!recaptchaVerifier) {
-        throw new Error("reCAPTCHA not initialized");
+      let verifier = recaptchaVerifier;
+      if (!verifier) {
+        verifier = initializeRecaptcha();
+        if (!verifier) {
+          throw new Error("Failed to initialize reCAPTCHA");
+        }
       }
 
       // Send OTP via Firebase
       const confirmation = await signInWithPhoneNumber(
         auth, 
         formattedPhone, 
-        recaptchaVerifier
+        verifier
       );
       
       setConfirmationResult(confirmation);
@@ -99,6 +126,7 @@ export const AuthPopup = ({
           setStep("name");
         } else {
           setError("User not found. Please sign up first.");
+          setLoading(false);
         }
       }
     } catch (err: any) {
@@ -110,24 +138,11 @@ export const AuthPopup = ({
       } else {
         setError("Failed to send OTP. Please try again.");
       }
-
-      // Reset reCAPTCHA on error
-      if ((window as any).grecaptcha && (window as any).recaptchaWidgetId) {
-        (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-      } else {
-        // Fallback: recreate verifier
-        if (recaptchaVerifier) {
-          recaptchaVerifier.clear();
-          const newVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible',
-          });
-          setRecaptchaVerifier(newVerifier);
-          newVerifier.render().then((widgetId) => {
-            setRecaptchaWidgetId(widgetId);
-            (window as any).recaptchaWidgetId = widgetId;
-          });
-        }
-      }
+      
+      // Reinitialize reCAPTCHA on error
+      setTimeout(() => {
+        initializeRecaptcha();
+      }, 500);
     } finally {
       setLoading(false);
     }
@@ -222,6 +237,12 @@ export const AuthPopup = ({
         setError("Invalid OTP. Please check and try again.");
       } else if (err.code === 'auth/code-expired') {
         setError("OTP expired. Please request a new one.");
+        // Reset to phone step on expired OTP
+        setStep("phone");
+        setOtp("");
+        setConfirmationResult(null);
+        // Reinitialize reCAPTCHA
+        setTimeout(() => initializeRecaptcha(), 500);
       } else {
         setError("OTP verification failed. Please try again.");
       }
@@ -238,14 +259,20 @@ export const AuthPopup = ({
     try {
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
       
-      if (!recaptchaVerifier) {
-        throw new Error("reCAPTCHA not initialized");
+      let verifier = recaptchaVerifier;
+      if (!verifier) {
+        verifier = initializeRecaptcha();
+        if (!verifier) {
+          throw new Error("Failed to initialize reCAPTCHA");
+        }
+        // Wait a bit for initialization
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       const confirmation = await signInWithPhoneNumber(
         auth, 
         formattedPhone, 
-        recaptchaVerifier
+        verifier
       );
       
       setConfirmationResult(confirmation);
@@ -256,27 +283,24 @@ export const AuthPopup = ({
     } catch (err: any) {
       console.error("Resend OTP error:", err);
       setError("Failed to resend OTP. Please try again.");
-
-      // Reset reCAPTCHA on error
-      if ((window as any).grecaptcha && (window as any).recaptchaWidgetId) {
-        (window as any).grecaptcha.reset((window as any).recaptchaWidgetId);
-      } else {
-        // Fallback: recreate verifier
-        if (recaptchaVerifier) {
-          recaptchaVerifier.clear();
-          const newVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible',
-          });
-          setRecaptchaVerifier(newVerifier);
-          newVerifier.render().then((widgetId) => {
-            setRecaptchaWidgetId(widgetId);
-            (window as any).recaptchaWidgetId = widgetId;
-          });
-        }
-      }
+      
+      // Reinitialize reCAPTCHA on error
+      setTimeout(() => {
+        initializeRecaptcha();
+      }, 500);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBack = () => {
+    setStep("phone");
+    setOtp("");
+    setName("");
+    setError("");
+    setConfirmationResult(null);
+    // Reinitialize reCAPTCHA when going back
+    setTimeout(() => initializeRecaptcha(), 100);
   };
 
   if (!isOpen) return null;
@@ -376,10 +400,7 @@ export const AuthPopup = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                setStep("phone");
-                setName("");
-              }}
+              onClick={handleBack}
               className="w-full px-4 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/10 transition-all duration-300"
             >
               Back
@@ -424,11 +445,7 @@ export const AuthPopup = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                setStep("phone");
-                setOtp("");
-                setConfirmationResult(null);
-              }}
+              onClick={handleBack}
               className="w-full px-4 py-3 bg-transparent border border-[#C9D6DF]/20 text-[#C9D6DF] rounded-lg font-semibold hover:bg-[#52616B]/10 transition-all duration-300"
             >
               Back
