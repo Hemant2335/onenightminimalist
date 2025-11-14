@@ -9,7 +9,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { authAPI } from "@/lib/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'; 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://onenightbackend-3-0.onrender.com/api'; 
 
 // --- Auth Popup Component ---
 export const AuthPopup = ({ 

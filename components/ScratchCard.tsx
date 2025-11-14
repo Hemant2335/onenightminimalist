@@ -37,7 +37,7 @@ const ScratchCard: React.FC<ScratchCardProps> = ({
     // Create gradient background for scratch surface
     const gradient = ctx.createLinearGradient(0, 0, width, height);
     gradient.addColorStop(0, scratchColor);
-    gradient.addColorStop(0.5, '#FFE55C'); // Lighter gold
+    gradient.addColorStop(0.5, 'blue'); // Lighter gold
     gradient.addColorStop(1, scratchColor);
 
     // Fill with gradient
