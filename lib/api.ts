@@ -116,9 +116,17 @@ export const eventsAPI = {
       method: "GET",
     }),
 
-  redeemCoupon: (couponId: string) =>
+  redeemCoupon: (couponId: string, feedback?: { ratings: Record<string, number>, comment?: string }) =>
     apiRequest(`/events/coupons/${couponId}/redeem`, {
       method: "POST",
+      body: feedback ? JSON.stringify({
+        overall_rating: feedback.ratings.overall,
+        organization_rating: feedback.ratings.organization,
+        content_rating: feedback.ratings.content,
+        recommendation_rating: feedback.ratings.recommendation,
+        value_rating: feedback.ratings.value,
+        comment: feedback.comment
+      }) : undefined,
     }),
   getWalletPass: (couponId: string) =>
     apiRequest(`/events/coupons/${couponId}/wallet`, {

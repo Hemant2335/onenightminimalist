@@ -2,7 +2,6 @@
 
 import RiseLandingPage from '@/components/RiseLandingPage';
 import { AuthPopup } from '@/components/AuthPopup';
-import { TestAuth } from '@/components/TestAuth';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -33,12 +32,11 @@ export default function Home() {
           setAuthPopupOpen(true);
         }}
       />
-      <AuthPopup 
-        isOpen={authPopupOpen} 
-        onClose={() => setAuthPopupOpen(false)} 
+      <AuthPopup
+        isOpen={authPopupOpen}
+        onClose={() => setAuthPopupOpen(false)}
         type={authType}
       />
-      <TestAuth />
     </>
   );
 }

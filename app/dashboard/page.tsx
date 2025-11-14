@@ -158,7 +158,7 @@ const DashboardPage = () => {
                 : 'bg-[#1E2022] text-[#C9D6DF] border border-[#C9D6DF]/20 hover:border-[#C9D6DF]/40'
             }`}
           >
-            Tickets
+            My Tickets
           </button>
           <button
             onClick={() => setActiveTab('coupons')}
@@ -168,7 +168,7 @@ const DashboardPage = () => {
                 : 'bg-[#1E2022] text-[#C9D6DF] border border-[#C9D6DF]/20 hover:border-[#C9D6DF]/40'
             }`}
           >
-            Coupons
+            My Coupons
           </button>
           <button
             onClick={() => setActiveTab('events')}
@@ -178,7 +178,7 @@ const DashboardPage = () => {
                 : 'bg-[#1E2022] text-[#C9D6DF] border border-[#C9D6DF]/20 hover:border-[#C9D6DF]/40'
             }`}
           >
-            Events
+            My Events
           </button>
         </div>
 
@@ -299,7 +299,7 @@ const DashboardPage = () => {
             {events.some(e => e.coupons && e.coupons.length > 0) ? (
               <div className="mb-12">
                 <h2 className="text-2xl font-bold text-[#F0F5F9] mb-6">
-                  Available Coupons
+                  My Coupons
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {events.flatMap((event) =>
