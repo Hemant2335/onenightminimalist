@@ -32,7 +32,13 @@ export const AuthPopup = ({
 
   // Initialize reCAPTCHA
   useEffect(() => {
-    if (isOpen && !recaptchaVerifier) {
+    if (isOpen) {
+      // Clear any existing verifier first
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+      }
+
+      // Create new verifier
       const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
         callback: () => {
