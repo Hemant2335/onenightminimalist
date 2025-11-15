@@ -289,7 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onAuthClick }
                 </button>
 
                 {/* Test Login Button */}
-                <button
+                {/* <button
                   onClick={() => setShowTestAuth(true)}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-colors"
                 >
@@ -307,7 +307,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onAuthClick }
                     />
                   </svg>
                   🧪 Test Login
-                </button>
+                </button> */}
               </div>
             )}
           </div>
