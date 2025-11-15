@@ -12,14 +12,14 @@ import { authAPI } from "@/lib/api";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://onenightbackend-3-0.onrender.com/api'; 
 
 // --- Auth Popup Component ---
-export const AuthPopup = ({ 
-  isOpen, 
-  onClose, 
-  type 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  type: "signin" | "signup" 
+export const AuthPopup = ({
+  isOpen,
+  onClose,
+  type: initialType = "signin"
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  type?: "signin" | "signup"
 }) => {
   const [step, setStep] = useState<"phone" | "otp" | "name">("phone");
   const [phone, setPhone] = useState("");
@@ -29,6 +29,7 @@ export const AuthPopup = ({
   const [error, setError] = useState("");
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [authType, setAuthType] = useState<"signin" | "signup">(initialType);
 
   // Initialize reCAPTCHA with proper cleanup
   const initializeRecaptcha = () => {
@@ -91,6 +92,32 @@ export const AuthPopup = ({
       // Format phone number (ensure it starts with country code)
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
 
+      // Check if user exists in your database first
+      const response = await fetch(`${API_BASE_URL}/auth/check-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: formattedPhone }),
+      });
+
+      const data = await response.json();
+
+      if (authType === "signin") {
+        // For signin, only proceed if user exists
+        if (!data.exists) {
+          setError("User not found. Please sign up first.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        // For signup, only proceed if user doesn't exist
+        if (data.exists) {
+          setError("User already exists. Please sign in instead.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Initialize reCAPTCHA if needed
       let verifier = recaptchaVerifier;
       if (!verifier) {
         verifier = initializeRecaptcha();
@@ -101,33 +128,19 @@ export const AuthPopup = ({
 
       // Send OTP via Firebase
       const confirmation = await signInWithPhoneNumber(
-        auth, 
-        formattedPhone, 
+        auth,
+        formattedPhone,
         verifier
       );
-      
+
       setConfirmationResult(confirmation);
-      
-      // Check if user exists in your database
-      const response = await fetch(`${API_BASE_URL}/auth/check-user`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone }),
-      });
 
-      const data = await response.json();
-
-      if (data.exists) {
+      if (authType === "signin") {
         // Existing user - go straight to OTP
         setStep("otp");
       } else {
         // New user - collect name first, then OTP
-        if (type === "signup") {
-          setStep("name");
-        } else {
-          setError("User not found. Please sign up first.");
-          setLoading(false);
-        }
+        setStep("name");
       }
     } catch (err: any) {
       console.error("Phone verification error:", err);
@@ -138,7 +151,7 @@ export const AuthPopup = ({
       } else {
         setError("Failed to send OTP. Please try again.");
       }
-      
+
       // Reinitialize reCAPTCHA on error
       setTimeout(() => {
         initializeRecaptcha();
@@ -186,10 +199,10 @@ export const AuthPopup = ({
       // Check if user exists
       const checkData = await authAPI.checkUser(user.phoneNumber || '');
 
-      if (checkData.exists) {
+      if (authType === "signin") {
         // Existing user - login
         const loginData = await authAPI.login();
-        
+
         if (loginData.success) {
           // Reset form and close
           onClose();
@@ -216,7 +229,7 @@ export const AuthPopup = ({
           user.phoneNumber || '',
           name
         );
-        
+
         if (registerData.success) {
           // Reset form and close
           onClose();
@@ -303,6 +316,18 @@ export const AuthPopup = ({
     setTimeout(() => initializeRecaptcha(), 100);
   };
 
+  const handleClose = () => {
+    // Reset all state when closing
+    setStep("phone");
+    setPhone("");
+    setOtp("");
+    setName("");
+    setError("");
+    setConfirmationResult(null);
+    setAuthType(initialType);
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -313,7 +338,7 @@ export const AuthPopup = ({
 
         {/* Close Button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#52616B]/20 transition-colors"
         >
           <svg className="w-5 h-5 text-[#C9D6DF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -324,8 +349,8 @@ export const AuthPopup = ({
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-[#F0F5F9] mb-2">
-            {step === "phone" 
-              ? (type === "signin" ? "Welcome Back" : "Join Us") 
+            {step === "phone"
+              ? (authType === "signin" ? "Welcome Back" : "Join Us")
               : step === "name"
               ? "Complete Sign Up"
               : "Verify OTP"}
@@ -337,6 +362,48 @@ export const AuthPopup = ({
               ? "Tell us your name"
               : "Enter the OTP sent to your phone"}
           </p>
+
+          {/* Auth Type Toggle */}
+          {step === "phone" && (
+            <div className="flex mt-4 bg-[#52616B]/20 rounded-lg p-1">
+              <button
+                onClick={() => {
+                  setAuthType("signin");
+                  setError("");
+                  setStep("phone");
+                  setPhone("");
+                  setOtp("");
+                  setName("");
+                  setConfirmationResult(null);
+                }}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  authType === "signin"
+                    ? "bg-[#C9D6DF] text-[#111111]"
+                    : "text-[#C9D6DF]/60 hover:text-[#C9D6DF]"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => {
+                  setAuthType("signup");
+                  setError("");
+                  setStep("phone");
+                  setPhone("");
+                  setOtp("");
+                  setName("");
+                  setConfirmationResult(null);
+                }}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  authType === "signup"
+                    ? "bg-[#C9D6DF] text-[#111111]"
+                    : "text-[#C9D6DF]/60 hover:text-[#C9D6DF]"
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Error Message */}
