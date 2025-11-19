@@ -39,8 +39,8 @@ export default function Header() {
                   onClick={() => router.push("/")}
                 >
                   <Image
-                    src="/Logo.png"
-                    alt="EventHub Logo"
+                    src="/RISE_DXB_Events_Light.png"
+                    alt="RISEDXB Logo"
                     width={200}
                     height={70}
                     className="object-contain"

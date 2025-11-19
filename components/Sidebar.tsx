@@ -48,16 +48,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onAuthClick }
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-[#C9D6DF]/10">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8">
+              <div className="w-20 ">
                 <Image
-                  src="/Logo.png"
-                  alt="EventHub Logo"
-                  width={32}
-                  height={32}
+                  src="/RISE_DXB_Events_Light.png"
+                  alt="RISEDXB Logo"
+                  width={200}
+                  height={200}
                   className="object-contain"
                 />
               </div>
-              <span className="text-lg font-semibold text-[#F0F5F9]">EventHub</span>
+              
             </div>
             <button
               onClick={onClose}

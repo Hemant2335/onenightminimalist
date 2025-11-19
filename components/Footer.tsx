@@ -33,9 +33,9 @@ const Footer = () => {
           <div className="md:col-span-2">
             <div className="flex items-center space-x-2 mb-6">
               <div className="w-10 h-10 bg-[#C9D6DF]/20 rounded-lg flex items-center justify-center border border-[#C9D6DF]/30">
-                <span className="text-[#C9D6DF] font-bold text-lg">E</span>
+                <span className="text-[#C9D6DF] font-bold text-lg">R</span>
               </div>
-              <span className="text-[#F0F5F9] font-bold text-xl">EventHub</span>
+              <span className="text-[#F0F5F9] font-bold text-xl">RISEDXB</span>
             </div>
             <p className="text-[#C9D6DF]/60 text-sm leading-relaxed max-w-md">
               Connecting people through unforgettable events. Discover, book, and experience the best events in your area.
@@ -109,7 +109,7 @@ const Footer = () => {
         <div className="border-t border-[#C9D6DF]/10 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-[#C9D6DF]/40 text-sm">
-              &copy; 2025 EventHub. All rights reserved.
+              &copy; 2025 RISEDXB. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
               <span className="text-[#C9D6DF]/40 text-sm">Made with</span>
